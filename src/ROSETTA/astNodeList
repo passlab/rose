@@ -528,6 +528,7 @@ SgOmpDeclareSimdStatement
 SgOmpForStatement
 SgOmpForSimdStatement
 SgOmpMasterStatement
+SgOmpMetadirectiveStatement
 SgOmpOrderedStatement
 SgOmpParallelStatement
 SgOmpSectionStatement
@@ -541,6 +542,7 @@ SgOmpTargetStatement
 SgOmpTargetDataStatement
 SgOmpSimdStatement
 SgOmpClause
+SgOmpAllocateClause
 SgOmpBeginClause
 SgOmpCollapseClause
 SgOmpCopyinClause
@@ -575,6 +577,7 @@ SgOmpAtomicClause
 SgOmpInbranchClause
 SgOmpNotinbranchClause
 SgOmpDependClause
+SgOmpWhenClause
 SgOpenclAccessModeModifier
 SgOpenStatement
 SgOptions

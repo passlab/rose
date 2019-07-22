@@ -32,6 +32,7 @@ in the build tree
 #endif
 
 using namespace OmpSupport;
+using namespace SageInterface;
 
 /* Parser - BISON */
 
@@ -60,6 +61,8 @@ static bool addVarExp(SgExpression* var);
 
 //Insert expression into some clause
 static bool addExpression(const char* expr);
+static bool addComplexClauseExpression(const char* expr);
+static bool addUserDefinedParameter(const char* expr);
 
 // The current AST annotation being built
 static OmpAttribute* ompattribute = NULL;
@@ -69,6 +72,16 @@ static OmpAttribute* ompattribute = NULL;
 // Used to indicate the OpenMP directive or clause to which a variable list or an expression should get added for the current OpenMP pragma being parsed.
 static omp_construct_enum omptype = e_unknown;
 
+// Store parameters temporarily in case of normalization.
+static omp_construct_enum first_parameter;
+static omp_construct_enum second_parameter;
+static omp_construct_enum third_parameter;
+// use existing clause for normalization or create a new one.
+static ComplexClause* setupComplexClause ();
+// the clause where variables will be added.
+static ComplexClause* current_clause;
+// normalize the complex clause after initial setup.
+static ComplexClause* normalizeComplexClause();
 // The node to which vars/expressions should get added
 //static OmpAttribute* omptype = 0;
 
@@ -96,6 +109,19 @@ static SgExpression* length_exp = NULL;
 // 
 static bool arraySection=true; 
 
+// mark whether it is complex clause.
+static bool is_complex_clause = false;
+
+static bool addComplexVar(const char* var);
+
+// mark whether it is for ompparser
+static bool is_ompparser_variable = false;
+static bool is_ompparser_expression = false;
+// add ompparser var
+static bool addOmpVariable(const char*);
+std::vector<std::pair<std::string, SgNode*> > omp_variable_list;
+static bool addOmpExpression(const char*);
+SgExpression* omp_expression = NULL;
 %}
 
 %locations
@@ -115,7 +141,7 @@ corresponding C type is union name defaults to YYSTYPE.
   Liao*/
 %token  OMP PARALLEL IF NUM_THREADS ORDERED SCHEDULE STATIC DYNAMIC GUIDED RUNTIME SECTIONS SINGLE NOWAIT SECTION
         FOR MASTER CRITICAL BARRIER ATOMIC FLUSH TARGET UPDATE DIST_DATA BLOCK DUPLICATE CYCLIC
-        THREADPRIVATE PRIVATE COPYPRIVATE FIRSTPRIVATE LASTPRIVATE SHARED DEFAULT NONE REDUCTION COPYIN 
+        THREADPRIVATE PRIVATE COPYPRIVATE FIRSTPRIVATE LASTPRIVATE SHARED DEFAULT NONE REDUCTION COPYIN ALLOCATE
         TASK TASKWAIT UNTIED COLLAPSE AUTO DECLARE DATA DEVICE MAP ALLOC TO FROM TOFROM PROC_BIND CLOSE SPREAD
         SIMD SAFELEN ALIGNED LINEAR UNIFORM INBRANCH NOTINBRANCH MPI MPI_ALL MPI_MASTER TARGET_BEGIN TARGET_END
         '(' ')' ',' ':' '+' '*' '-' '&' '^' '|' LOGAND LOGOR SHLEFT SHRIGHT PLUSPLUS MINUSMINUS PTR_TO '.'
@@ -124,6 +150,8 @@ corresponding C type is union name defaults to YYSTYPE.
         XOR_ASSIGN2 OR_ASSIGN2 DEPEND IN OUT INOUT MERGEABLE
         LEXICALERROR IDENTIFIER MIN MAX
         READ WRITE CAPTURE SIMDLEN FINAL PRIORITY
+        INSCAN
+        OMP_DEFAULT_MEM_ALLOC OMP_LARGE_CAP_MEM_ALLOC OMP_CONST_MEM_ALLOC OMP_HIGH_BW_MEM_ALLOC OMP_LOW_LAT_MEM_ALLOC OMP_CGROUP_MEM_ALLOC OMP_PTEAM_MEM_ALLOC OMP_THREAD_MEM_ALLOC
 /*We ignore NEWLINE since we only care about the pragma string , We relax the syntax check by allowing it as part of line continuation */
 %token <itype> ICONSTANT   
 %token <stype> EXPRESSION ID_EXPRESSION 
@@ -175,7 +203,26 @@ openmp_directive : parallel_directive
                  | target_directive
                  | target_data_directive
                  | simd_directive
+                 | omp_varlist
+                 | omp_expression
                  ;
+
+omp_varlist : OMP {
+                    is_ompparser_variable = true;
+                    omptype = e_unknown; 
+                    cur_omp_directive = omptype; b_within_variable_list = true;} variable_list {b_within_variable_list = false; is_ompparser_variable = false; }
+               ;
+
+omp_expression : EXPRESSION {
+                is_ompparser_expression = true;
+                omptype = e_unknown;
+                b_within_variable_list = true;
+            } '(' expression ')' {
+                addOmpExpression("");
+                is_ompparser_expression = false;
+                b_within_variable_list = false;
+            }
+            ;
 
 parallel_directive : /* #pragma */ OMP PARALLEL {
                        ompattribute = buildOmpAttribute(e_parallel,gNode,true);
@@ -195,16 +242,19 @@ parallel_clause_seq : parallel_clause
                     ;
 
 proc_bind_clause : PROC_BIND '(' MASTER ')' { 
-                        ompattribute->addClause(e_proc_bind);
-                        ompattribute->setProcBindPolicy (e_proc_bind_master); 
-                      }
+                        omptype = e_proc_bind;
+                        current_clause = ompattribute->addComplexClause(omptype);
+                        current_clause->first_parameter = e_proc_bind_master;
+                    }
                     | PROC_BIND '(' CLOSE ')' {
-                        ompattribute->addClause(e_proc_bind);
-                        ompattribute->setProcBindPolicy (e_proc_bind_close); 
+                        omptype = e_proc_bind;
+                        current_clause = ompattribute->addComplexClause(omptype);
+                        current_clause->first_parameter = e_proc_bind_close;
                       }
                     | PROC_BIND '(' SPREAD ')' {
-                        ompattribute->addClause(e_proc_bind);
-                        ompattribute->setProcBindPolicy (e_proc_bind_spread); 
+                        omptype = e_proc_bind;
+                        current_clause = ompattribute->addComplexClause(omptype);
+                        current_clause->first_parameter = e_proc_bind_spread;
                       }
                     ;
 
@@ -218,12 +268,17 @@ parallel_clause : if_clause
                 | copyin_clause
                 | reduction_clause
                 | proc_bind_clause
+                | allocate_clause
                 ;
 
 copyin_clause: COPYIN {
-                           ompattribute->addClause(e_copyin);
-                           omptype = e_copyin;
-                         } '(' {b_within_variable_list = true;} variable_list ')' {b_within_variable_list = false;}
+                        omptype = e_copyin;
+                        first_parameter = e_unknown;
+                        second_parameter = e_unknown;
+                        third_parameter = e_unknown;
+                        current_clause = setupComplexClause();
+                        is_complex_clause = true;
+                        } '(' {b_within_variable_list = true;} variable_list ')' {is_complex_clause = false; b_within_variable_list = false;}
                 ;
 
 
@@ -268,43 +323,48 @@ for_or_simd_clause : ordered_clause
           ;
 
 schedule_chunk_opt: /* empty */
-                | ',' expression { 
-                     addExpression("");
-                 }
+                | ',' expression {
+                    addComplexClauseExpression("");
+                    is_complex_clause = false;
+                }
                 ; 
 
 ordered_clause: ORDERED {
-                      ompattribute->addClause(e_ordered_clause);
-                      omptype = e_ordered_clause;
+                    omptype = e_ordered_clause;
+                    current_clause = ompattribute->addComplexClause(omptype);
+                    is_complex_clause = true;
                 } ordered_parameter_opt
                ;
 
 ordered_parameter_opt: /* empty */
                 | '(' expression ')' {
-                    addExpression("");
+                    addComplexClauseExpression("");
+                    is_complex_clause = false;
                    }
                  ;
 
-schedule_clause: SCHEDULE '(' schedule_kind {
-                      ompattribute->addClause(e_schedule);
-                      ompattribute->setScheduleKind(static_cast<omp_construct_enum>($3));
-                      omptype = e_schedule; }
-                    schedule_chunk_opt  ')' 
-                 ;
+schedule_clause: SCHEDULE {
+                    omptype = e_schedule;
+                    current_clause = ompattribute->addComplexClause(omptype);
+                    is_complex_clause = true;
+                } '(' schedule_kind schedule_chunk_opt ')'
+                ;
 
 collapse_clause: COLLAPSE {
-                      ompattribute->addClause(e_collapse);
-                      omptype = e_collapse;
+                    omptype = e_collapse;
+                    current_clause = ompattribute->addComplexClause(omptype);
+                    is_complex_clause = true;
                     } '(' expression ')' { 
-                      addExpression("");
+                    addComplexClauseExpression("");
+                    is_complex_clause = false;
                     }
                   ;
  
-schedule_kind : STATIC  { $$ = e_schedule_static; }
-              | DYNAMIC { $$ = e_schedule_dynamic; }
-              | GUIDED  { $$ = e_schedule_guided; }
-              | AUTO    { $$ = e_schedule_auto; }
-              | RUNTIME { $$ = e_schedule_runtime; }
+schedule_kind : STATIC  { current_clause->first_parameter = e_schedule_static; }
+              | DYNAMIC { current_clause->first_parameter = e_schedule_dynamic; }
+              | GUIDED  { current_clause->first_parameter = e_schedule_guided; }
+              | AUTO    { current_clause->first_parameter = e_schedule_auto; }
+              | RUNTIME { current_clause->first_parameter = e_schedule_runtime; }
               ;
 
 sections_directive : /* #pragma */ OMP SECTIONS { 
@@ -348,7 +408,8 @@ single_clause_seq : single_clause
                   | single_clause_seq ',' single_clause
                   ;
 nowait_clause: NOWAIT {
-                  ompattribute->addClause(e_nowait);
+                omptype = e_nowait;
+                current_clause = ompattribute->addComplexClause(omptype);
                 }
               ;
 
@@ -358,10 +419,14 @@ single_clause : unique_single_clause
               | nowait_clause
               ;
 unique_single_clause : COPYPRIVATE { 
-                         ompattribute->addClause(e_copyprivate);
-                         omptype = e_copyprivate; 
+                        omptype = e_copyprivate;
+                        first_parameter = e_unknown;
+                        second_parameter = e_unknown;
+                        third_parameter = e_unknown;
+                        current_clause = setupComplexClause();
+                        is_complex_clause = true;
                        }
-                       '(' {b_within_variable_list = true;} variable_list ')' {b_within_variable_list =false;}
+                       '(' {b_within_variable_list = true;} variable_list ')' {b_within_variable_list = false; is_complex_clause = false;}
 
 task_directive : /* #pragma */ OMP TASK {
                    ompattribute = buildOmpAttribute(e_task,gNode,true);
@@ -389,45 +454,49 @@ task_clause : unique_task_clause
             ;
 
 unique_task_clause : FINAL { 
-                       ompattribute->addClause(e_final);
-                       omptype = e_final; 
+                        omptype = e_final;
+                        current_clause = ompattribute->addComplexClause(omptype);
+                        is_complex_clause = true;
                      } '(' expression ')' { 
-                       addExpression("");
+                        addComplexClauseExpression("");
+                        is_complex_clause = false;
                      }
                    | PRIORITY { 
-                       ompattribute->addClause(e_priority);
-                       omptype = e_priority; 
+                        omptype = e_priority;
+                        current_clause = ompattribute->addComplexClause(omptype);
+                        is_complex_clause = true;
                      } '(' expression ')' { 
-                       addExpression("");
+                        addComplexClauseExpression("");
+                        is_complex_clause = false;
                      }
                    | UNTIED {
-                       ompattribute->addClause(e_untied);
+                        omptype = e_untied;
+                        current_clause = ompattribute->addComplexClause(omptype);
                      }
                    | MERGEABLE {
-                       ompattribute->addClause(e_mergeable);
+                        omptype = e_mergeable;
+                        current_clause = ompattribute->addComplexClause(omptype);
                      }
                    ;
                    
 depend_clause : DEPEND { 
-                          ompattribute->addClause(e_depend);
+                        omptype = e_depend;
+                        current_clause = ompattribute->addComplexClause(omptype);
                         } '(' dependence_type ':' {b_within_variable_list = true; array_symbol=NULL; } variable_exp_list ')' 
                         {
-                          assert ((ompattribute->getVariableList(omptype)).size()>0); /* I believe that depend() must have variables */
+                          assert ((current_clause->variable_list).size()>0); /* I believe that depend() must have variables */
                           b_within_variable_list = false;
                         }
                       ;
 
 dependence_type : IN {
-                       ompattribute->setDependenceType(e_depend_in); 
-                       omptype = e_depend_in; /*variables are stored for each operator*/
+                    current_clause->first_parameter = e_depend_in;
                      }
                    | OUT {
-                       ompattribute->setDependenceType(e_depend_out);  
-                       omptype = e_depend_out;
+                    current_clause->first_parameter = e_depend_out;
                      }
                    | INOUT {
-                       ompattribute->setDependenceType(e_depend_inout); 
-                       omptype = e_depend_inout;
+                    current_clause->first_parameter = e_depend_inout;
                       }
                    ;
 
@@ -614,84 +683,178 @@ threadprivate_directive : /* #pragma */ OMP THREADPRIVATE {
                         ;
 
 default_clause : DEFAULT '(' SHARED ')' { 
-                        ompattribute->addClause(e_default);
-                        ompattribute->setDefaultValue(e_default_shared); 
+                        omptype = e_default;
+                        current_clause = ompattribute->addComplexClause(omptype);
+                        current_clause->first_parameter = e_default_shared;
                       }
                     | DEFAULT '(' NONE ')' {
-                        ompattribute->addClause(e_default);
-                        ompattribute->setDefaultValue(e_default_none);
+                        omptype = e_default;
+                        current_clause = ompattribute->addComplexClause(omptype);
+                        current_clause->first_parameter = e_default_none;
                       }
                     ;
 
                    
 private_clause : PRIVATE {
-                              ompattribute->addClause(e_private); omptype = e_private;
-                            } '(' {b_within_variable_list = true;} variable_list ')' {b_within_variable_list = false;}
+                        omptype = e_private;
+                        first_parameter = e_unknown;
+                        second_parameter = e_unknown;
+                        third_parameter = e_unknown;
+                        current_clause = setupComplexClause();
+                        is_complex_clause = true;
+                        } '(' {b_within_variable_list = true;} variable_list ')' {is_complex_clause = false; b_within_variable_list = false;}
                           ;
 
 firstprivate_clause : FIRSTPRIVATE { 
-                                 ompattribute->addClause(e_firstprivate); 
-                                 omptype = e_firstprivate;
-                               } '(' {b_within_variable_list = true;} variable_list ')' {b_within_variable_list = false;}
-                             ;
+                        omptype = e_firstprivate;
+                        first_parameter = e_unknown;
+                        second_parameter = e_unknown;
+                        third_parameter = e_unknown;
+                        current_clause = setupComplexClause();
+                        is_complex_clause = true;
+                        } '(' {b_within_variable_list = true;} variable_list ')' {is_complex_clause = false; b_within_variable_list = false;}
+                        ;
 
 lastprivate_clause : LASTPRIVATE { 
-                                  ompattribute->addClause(e_lastprivate); 
-                                  omptype = e_lastprivate;
-                                } '(' {b_within_variable_list = true;} variable_list ')' {b_within_variable_list = false;}
-                              ;
+                        omptype = e_lastprivate;
+                        first_parameter = e_unknown;
+                        second_parameter = e_unknown;
+                        third_parameter = e_unknown;
+                        current_clause = setupComplexClause();
+                        is_complex_clause = true;
+                        } '(' {b_within_variable_list = true;} variable_list ')' {is_complex_clause = false; b_within_variable_list = false;}
+                        ;
 
 share_clause : SHARED {
-                        ompattribute->addClause(e_shared); omptype = e_shared; 
-                      } '(' {b_within_variable_list = true;} variable_list ')' {b_within_variable_list = false;}
+                        omptype = e_shared;
+                        first_parameter = e_unknown;
+                        second_parameter = e_unknown;
+                        third_parameter = e_unknown;
+                        current_clause = setupComplexClause();
+                        is_complex_clause = true;
+                        } '(' {b_within_variable_list = true;} variable_list ')' {is_complex_clause = false; b_within_variable_list = false;}
                     ;
 
 reduction_clause : REDUCTION { 
-                          ompattribute->addClause(e_reduction);
-                        } '(' reduction_operator ':' {b_within_variable_list = true;} variable_list ')' {b_within_variable_list = false;}
+                        omptype = e_reduction;
+                        first_parameter = e_unknown;
+                        second_parameter = e_unknown;
+                        third_parameter = e_unknown;
+                        current_clause = NULL;
+                        is_complex_clause = true;
+                        } '(' reduction_parameters {is_complex_clause = false;} ')'
                       ;
 
-reduction_operator : '+' {
-                       ompattribute->setReductionOperator(e_reduction_plus); 
-                       omptype = e_reduction_plus; /*variables are stored for each operator*/
+reduction_parameters: reduction_modifier ',' {
+                        } reduction_identifier ':' {
+                            current_clause = setupComplexClause();
+                            if (second_parameter == e_user_defined_parameter) {
+                                addUserDefinedParameter("");
+                            };
+                            b_within_variable_list = true;
+                        } variable_list {b_within_variable_list = false;
+                        }
+                        | reduction_identifier ':' {
+                            current_clause = setupComplexClause();
+                            if (second_parameter == e_user_defined_parameter) {
+                                addUserDefinedParameter("");
+                            };
+                            b_within_variable_list = true;} variable_list {b_within_variable_list = false;
+                        }
+            ;
+
+reduction_modifier : INSCAN {
+                first_parameter = e_reduction_inscan; 
+            }
+            | TASK {
+                first_parameter = e_reduction_task; 
+            }
+            | DEFAULT {
+                first_parameter = e_reduction_default;
+            }
+            ;
+
+
+reduction_identifier : '+' {
+                    second_parameter = e_reduction_plus;
                      }
                    | '*' {
-                       ompattribute->setReductionOperator(e_reduction_mul);  
-                       omptype = e_reduction_mul;
+                    second_parameter = e_reduction_mul;
                      }
                    | '-' {
-                       ompattribute->setReductionOperator(e_reduction_minus); 
-                       omptype = e_reduction_minus;
+                    second_parameter = e_reduction_minus;
                       }
                    | MIN {
-                       ompattribute->setReductionOperator(e_reduction_min); 
-                       omptype = e_reduction_min;
+                    second_parameter = e_reduction_min;
                       }
                    | MAX {
-                       ompattribute->setReductionOperator(e_reduction_max); 
-                       omptype = e_reduction_max;
+                    second_parameter = e_reduction_max;
                       }
                    | '&' {
-                       ompattribute->setReductionOperator(e_reduction_bitand);  
-                       omptype = e_reduction_bitand;
+                    second_parameter = e_reduction_bitand;
                       }
                    | '^' {
-                       ompattribute->setReductionOperator(e_reduction_bitxor);  
-                       omptype = e_reduction_bitxor;
+                    second_parameter = e_reduction_bitxor;
                       }
                    | '|' {
-                       ompattribute->setReductionOperator(e_reduction_bitor);  
-                       omptype = e_reduction_bitor;
+                    second_parameter = e_reduction_bitor;
                       }
                    | LOGAND /* && */ {
-                       ompattribute->setReductionOperator(e_reduction_logand);  
-                       omptype = e_reduction_logand;
+                    second_parameter = e_reduction_logand;
                      }
                    | LOGOR /* || */ {
-                       ompattribute->setReductionOperator(e_reduction_logor); 
-                       omptype = e_reduction_logor;
+                    second_parameter = e_reduction_logor;
                      }
+                   | expression {
+                    second_parameter = e_user_defined_parameter;
+                    }
                    ;
+
+allocate_clause : ALLOCATE {
+                        omptype = e_allocate;
+                        first_parameter = e_unknown;
+                        second_parameter = e_unknown;
+                        third_parameter = e_unknown;
+                        current_clause = setupComplexClause();
+                        is_complex_clause = true;
+                        } '(' {b_within_variable_list = true;} allocate_parameters {is_complex_clause = false;} ')'
+                      ;
+
+allocate_parameters : allocator {
+                            current_clause = normalizeComplexClause();
+                            addUserDefinedParameter("");
+                        } ':' variable_list {b_within_variable_list = false;}
+                    | variable_list {b_within_variable_list = false;}
+            ;
+
+allocator  :  OMP_DEFAULT_MEM_ALLOC {
+                first_parameter = e_allocate_default_mem_alloc;
+                }
+            | OMP_LARGE_CAP_MEM_ALLOC {
+                first_parameter = e_allocate_large_cap_mem_alloc;
+                }
+            | OMP_CONST_MEM_ALLOC {
+                first_parameter = e_allocate_const_mem_alloc;
+                }
+            | OMP_HIGH_BW_MEM_ALLOC {
+                first_parameter = e_allocate_high_bw_mem_alloc;
+                }
+            | OMP_LOW_LAT_MEM_ALLOC {
+                first_parameter = e_allocate_low_lat_mem_alloc;
+                }
+            | OMP_CGROUP_MEM_ALLOC {
+                first_parameter = e_allocate_cgroup_mem_alloc;
+                }
+            | OMP_PTEAM_MEM_ALLOC {
+                first_parameter = e_allocate_pteam_mem_alloc;
+                }
+            | OMP_THREAD_MEM_ALLOC {
+                first_parameter = e_allocate_thread_mem_alloc;
+                }
+            | expression {
+                first_parameter = e_user_defined_parameter;
+                }
+            ;
 
 target_data_directive: /* pragma */ OMP TARGET DATA {
                        ompattribute = buildOmpAttribute(e_target_data, gNode,true);
@@ -785,20 +948,36 @@ end_clause: TARGET_END {
 
                     
 if_clause: IF {
-                           ompattribute->addClause(e_if);
-                           omptype = e_if;
-             } '(' expression ')' {
-                            addExpression("");
-             }
+                omptype = e_if;
+                current_clause = ompattribute->addComplexClause(omptype);
+                is_complex_clause = true;
+            } '(' if_parameters ')' {
+                is_complex_clause = false;
+            }
              ;
 
+if_parameters: if_modifier ':' { ; }  expression {
+                addComplexClauseExpression("");
+                }
+             | expression {
+                addComplexClauseExpression("");
+                }
+            ;
+
+if_modifier: PARALLEL {
+             current_clause->first_parameter = e_parallel;
+            }
+            ;
+
 num_threads_clause: NUM_THREADS {
-                           ompattribute->addClause(e_num_threads);
-                           omptype = e_num_threads;
-                         } '(' expression ')' {
-                            addExpression("");
-                         }
-                      ;
+                omptype = e_num_threads;
+                current_clause = ompattribute->addComplexClause(omptype);
+                is_complex_clause = true;
+            } '(' expression ')' {
+                addComplexClauseExpression("");
+                is_complex_clause = false;
+            }
+            ;
 map_clause: MAP {
                           ompattribute->addClause(e_map);
                            omptype = e_map; // use as a flag to see if it will be reset later
@@ -934,9 +1113,10 @@ aligned_clause_alignment: ':' expression {addExpression(""); }
 
 
 linear_clause :  LINEAR { 
-                         ompattribute->addClause(e_linear);
-                         omptype = e_linear; 
-                        }
+                    omptype = e_linear;
+                    current_clause = ompattribute->addComplexClause(omptype);
+                    is_complex_clause = true;
+                    }
                        '(' {b_within_variable_list = true;} variable_list {b_within_variable_list =false;}  linear_clause_step_optseq ')'
                 ;
 
@@ -944,7 +1124,11 @@ linear_clause_step_optseq: /* empty */
                         | linear_clause_step
                         ;
 
-linear_clause_step: ':' expression {addExpression(""); } 
+linear_clause_step: ':' expression {
+                    addComplexClauseExpression("");
+                    is_complex_clause = false;
+                }
+                ;
 
 /* parsing real expressions here, Liao, 10/12/2008
    */       
@@ -1302,8 +1486,37 @@ variable-list : identifier
 */
 
 /* in C++ (we use the C++ version) */ 
-variable_list : ID_EXPRESSION { if (!addVar((const char*)$1)) YYABORT; }
-              | variable_list ',' ID_EXPRESSION { if (!addVar((const char*)$3)) YYABORT; }
+variable_list : ID_EXPRESSION {
+              if (is_complex_clause) {
+                addComplexVar((const char*)$1);
+              }
+              else if (is_ompparser_variable) {
+                std::cout << "Got expression: " << $1 << "\n";
+                addOmpVariable((const char*)$1);
+              }
+              else {
+                if (!addVar((const char*)$1)) {
+                    YYABORT;
+                };
+              }
+            }
+              | variable_list ',' ID_EXPRESSION {
+              if (is_complex_clause) {
+                addComplexVar((const char*)$3);
+              }
+              else if (is_ompparser_variable) {
+                std::cout << "Got expression: " << $3 << "\n";
+                addOmpVariable((const char*)$3);
+              }
+              else {
+                if (!addVar((const char*)$3)) {
+                    YYABORT;
+                };
+              }
+            }
+
+
+//if (!addVar((const char*)$3)) YYABORT; }
               ;
 
 /*  depend( array1[i][k], array2[p][l]), real array references in the list  */
@@ -1401,6 +1614,26 @@ static bool addVar(const char* var)  {
     return true;
 }
 
+static bool addComplexVar(const char* var)  {
+    array_symbol = ompattribute->addComplexClauseVariable(current_clause, var);
+    return true;
+}
+
+static bool addOmpVariable(const char* var)  {
+    SgInitializedName* sgvar = NULL;
+    SgVariableSymbol* symbol = NULL;
+    SgScopeStatement* scope = SageInterface::getScope(gNode);
+    ROSE_ASSERT(scope != NULL);
+    symbol = lookupVariableSymbolInParentScopes (var, scope);
+    sgvar = symbol->get_declaration();
+    if (sgvar != NULL) {
+        symbol = isSgVariableSymbol(sgvar->get_symbol_from_symbol_table());
+    };
+    omp_variable_list.push_back(std::make_pair(var, sgvar));
+    return true;
+}
+
+
 static bool addVarExp(SgExpression* exp)  { // new interface to add variables, supporting array reference expressions
     array_symbol = ompattribute->addVariable(omptype,exp);
     return true;
@@ -1413,7 +1646,86 @@ static bool addExpression(const char* expr) {
     // ompattribute->addExpression(omptype,std::string(expr),NULL);
     // std::cout<<"debug: current expression is:"<<current_exp->unparseToString()<<std::endl;
     assert (current_exp != NULL);
-    ompattribute->addExpression(omptype,std::string(expr),current_exp);
+    ompattribute->addExpression(omptype, std::string(expr),current_exp);
     return true;
 }
+
+
+static bool addOmpExpression(const char* expr) {
+    assert (current_exp != NULL);
+    omp_expression = current_exp;
+    omp_expression->set_parent(gNode);
+    return true;
+}
+
+
+// The ROSE's string-based AST construction is not stable,
+// pass real expressions as SgExpression, Liao
+static bool addComplexClauseExpression(const char* expr) {
+    assert (current_exp != NULL);
+    ompattribute->addComplexClauseExpression(omptype, std::string(expr),current_exp);
+    return true;
+}
+
+static bool addUserDefinedParameter(const char* expr) {
+    assert (current_exp != NULL);
+    ompattribute->addUserDefinedParameter(omptype, std::string(expr), current_exp);
+    return true;
+}
+
+static ComplexClause* setupComplexClause() {
+    std::deque<ComplexClause>* inspecting_complex_clauses = ompattribute->getComplexClauses(omptype);
+    // iterate existing clauses with specific type and compare parameters.
+    if (inspecting_complex_clauses != NULL) {
+        std::deque<ComplexClause>::iterator iter;
+        for (iter = inspecting_complex_clauses->begin(); iter != inspecting_complex_clauses->end(); iter++) {
+            if ((iter->first_parameter == first_parameter) && (iter->second_parameter == second_parameter) && (iter->third_parameter == third_parameter)) {
+                return &*iter;
+            }
+        }
+    };
+    // no existing clause matched. Create a new one and set two parameters.
+    ComplexClause* new_clause = ompattribute->addComplexClause(omptype);
+    new_clause->first_parameter = first_parameter;
+    new_clause->second_parameter = second_parameter;
+    new_clause->third_parameter = third_parameter;
+    return new_clause;
+}
+
+static ComplexClause* normalizeComplexClause() {
+    std::deque<ComplexClause>* inspecting_complex_clauses = ompattribute->getComplexClauses(omptype);
+    std::deque<ComplexClause>::iterator unnormalized_clause;
+    ComplexClause* normalized_clause = NULL;
+    // iterate existing clauses with specific type and find proper position to insert expression or variables.
+    if (inspecting_complex_clauses != NULL) {
+        std::deque<ComplexClause>::iterator iter;
+        for (iter = inspecting_complex_clauses->begin(); iter != inspecting_complex_clauses->end(); iter++) {
+            if ((iter->first_parameter == first_parameter) && (iter->second_parameter == second_parameter) && (iter->third_parameter == third_parameter)) {
+                normalized_clause = &*iter;
+            }
+            else if (iter->first_parameter == current_clause->first_parameter && iter->second_parameter == current_clause->second_parameter && iter->third_parameter == current_clause->third_parameter) {
+                unnormalized_clause = iter;
+            }
+        }
+    };
+    // make necessary modifications to candidate position.
+    if (normalized_clause != NULL) {
+        if (unnormalized_clause->expression.first == "" && unnormalized_clause->variable_list.size() == 0) {
+            inspecting_complex_clauses->erase(unnormalized_clause);
+        };
+    }
+    else {
+        if (unnormalized_clause->expression.first == "" && unnormalized_clause->variable_list.size() == 0) {
+            normalized_clause = &*unnormalized_clause;
+            normalized_clause->first_parameter = first_parameter;
+            normalized_clause->second_parameter = second_parameter;
+            normalized_clause->third_parameter = third_parameter;
+        }
+        else {
+            normalized_clause = setupComplexClause();
+        };
+    };
+    return normalized_clause;
+}
+
 

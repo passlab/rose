@@ -46,6 +46,7 @@ HEADER_OMP_CLAUSE_START
        // Liao (5/30/2009): Added support for reduction clauses within an OpenMP directive
 	enum omp_default_option_enum{
 	  e_omp_default_unknown =0,
+	  e_omp_default_variant,
 	  //4 values for default clause
 	  //C/C++ default values
 	  e_omp_default_none,
@@ -66,7 +67,7 @@ HEADER_OMP_CLAUSE_START
           e_omp_schedule_last
         };
 
-        enum omp_reduction_operator_enum
+        enum omp_reduction_identifier_enum
         {
             e_omp_reduction_unknown,
             // reduction operations
@@ -91,7 +92,61 @@ HEADER_OMP_CLAUSE_START
             e_omp_reduction_iand,
             e_omp_reduction_ior,
             e_omp_reduction_ieor,
+            e_omp_reduction_user_defined_identifier,
             e_omp_reduction_last
+
+        };
+
+        enum omp_reduction_modifier_enum
+        {
+            e_omp_reduction_modifier_unknown,
+            e_omp_reduction_inscan,
+            e_omp_reduction_task,
+            e_omp_reduction_default
+        };
+
+        enum omp_when_context_kind_enum
+        {
+            e_omp_when_context_kind_unknown = 0,
+            e_omp_when_context_kind_host,
+            e_omp_when_context_kind_nohost,
+            e_omp_when_context_kind_any,
+            e_omp_when_context_kind_cpu,
+            e_omp_when_context_kind_gpu,
+            e_omp_when_context_kind_fpga
+        };
+
+        enum omp_when_context_vendor_enum
+        {
+            e_omp_when_context_vendor_unspecified = 0,
+            e_omp_when_context_vendor_amd,
+            e_omp_when_context_vendor_arm,
+            e_omp_when_context_vendor_bsc,
+            e_omp_when_context_vendor_cray,
+            e_omp_when_context_vendor_fujitsu,
+            e_omp_when_context_vendor_gnu,
+            e_omp_when_context_vendor_ibm,
+            e_omp_when_context_vendor_intel,
+            e_omp_when_context_vendor_llvm,
+            e_omp_when_context_vendor_pgi,
+            e_omp_when_context_vendor_ti,
+            e_omp_when_context_vendor_unknown
+        };
+
+        enum omp_allocate_modifier_enum
+        {
+            e_omp_allocate_modifier_unknown,
+
+            e_omp_allocate_default_mem_alloc,
+            e_omp_allocate_large_cap_mem_alloc,
+            e_omp_allocate_const_mem_alloc,
+            e_omp_allocate_high_bw_mem_alloc,
+            e_omp_allocate_low_lat_mem_alloc,
+            e_omp_allocate_cgroup_mem_alloc,
+            e_omp_allocate_pteam_mem_alloc,
+            e_omp_allocate_thread_mem_alloc,
+
+            e_omp_allocate_user_defined_modifier
         };
 
         enum omp_dependence_type_enum
@@ -143,6 +198,12 @@ HEADER_OMP_CLAUSE_START
           e_omp_atomic_clause_capture
         };
 
+        enum omp_if_modifier_enum
+        {
+            e_omp_if_modifier_unknown,
+            e_omp_if_parallel
+        };
+       
 
 
 HEADER_OMP_CLAUSE_END

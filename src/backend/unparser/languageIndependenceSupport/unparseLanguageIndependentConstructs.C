@@ -31,6 +31,9 @@ Sawyer::Message::Facility UnparseLanguageIndependentConstructs::mlog;
 
 // DQ (12/5/2014): Adding support to track transitions between unparsing via the AST and unparsing via the Token Stream.
 SgStatement* global_lastStatementUnparsed = NULL;
+// global flag for variant directive
+bool isVariant = false;
+bool isConstruct = false;
 
 UnparseLanguageIndependentConstructs::unparsed_as_enum_type global_unparsed_as = UnparseLanguageIndependentConstructs::e_unparsed_as_error;
 
@@ -2669,6 +2672,7 @@ UnparseLanguageIndependentConstructs::unparseStatement(SgStatement* stmt, SgUnpa
                  // Generic OpenMP directives with a format of : begin-directive, begin-clauses, body, end-directive , end-clauses
                     case V_SgOmpCriticalStatement:
                     case V_SgOmpMasterStatement:
+                    case V_SgOmpMetadirectiveStatement:
                     case V_SgOmpOrderedStatement:
                     case V_SgOmpSectionsStatement:
                     case V_SgOmpParallelStatement:
@@ -7008,12 +7012,237 @@ void UnparseLanguageIndependentConstructs::unparseOmpDefaultClause(SgOmpClause* 
         curprint(string("firstprivate"));
         break; 
       }
+    case SgOmpClause::e_omp_default_variant:
+      {
+        SgStatement* variant_directive = c->get_variant_directive();
+        if (variant_directive != NULL) {
+          isVariant = true;
+          unparseOmpGenericStatement(variant_directive, info);
+          isVariant = false;
+        };
+        break;
+      }
     default:
       cerr<<"Error: UnparseLanguageIndependentConstructs::unparseOmpDefaultClause() meets unacceptable default option value:"<<dv<<endl;
       ROSE_ASSERT (false);
       break;
-  }    
+  }
   curprint(string(")"));
+}
+
+void UnparseLanguageIndependentConstructs::unparseOmpWhenClause(SgOmpClause* clause, SgUnparse_Info& info) {
+    ROSE_ASSERT(clause != NULL);
+    SgOmpWhenClause * c = isSgOmpWhenClause(clause);
+    ROSE_ASSERT(c!= NULL);
+    curprint(string(" when("));
+    SgExpression* user_condition = c->get_user_condition();
+    SgUnparse_Info ninfo(info);
+    bool has_trait_set = false;
+    if (user_condition) {
+        curprint(string("user={condition("));
+        unparseExpression(user_condition, ninfo);
+        curprint(string(")}"));
+        has_trait_set = true;
+    };
+    std::list<SgStatement*> construct_directives = c->get_construct_directives();
+    if (construct_directives.size()) {
+        if (has_trait_set) {
+            curprint(string(", "));
+        };
+        curprint(string("construct={"));
+        std::list<SgStatement*>::iterator iter;
+        bool has_trait_selector = false;
+        for (iter = construct_directives.begin(); iter != construct_directives.end(); iter++) {
+            if (has_trait_selector) {
+                curprint(string(", "));
+            };
+            isVariant = true;
+            isConstruct = true;
+            unparseOmpGenericStatement(*iter, info);
+            isConstruct = false;
+            isVariant = false;
+            has_trait_selector = true;
+        };
+        curprint(string("}"));
+        has_trait_set = true;
+    };
+    bool has_device = false;
+    SgExpression* device_arch = c->get_device_arch();
+    if (device_arch != NULL) {
+        if (has_trait_set) {
+            curprint(string(", "));
+        };
+        if (!has_device) {
+            curprint(string("device={"));
+            has_device = true;
+        };
+        curprint(string("arch("));
+        unparseExpression(device_arch, ninfo);
+        curprint(string(")"));
+    };
+    SgExpression* device_isa = c->get_device_isa();
+    if (device_isa != NULL) {
+        if (has_trait_set) {
+            curprint(string(", "));
+        };
+        if (!has_device) {
+            curprint(string("device={"));
+            has_device = true;
+        };
+        curprint(string("isa("));
+        unparseExpression(device_isa, ninfo);
+        curprint(string(")"));
+    };
+    SgOmpClause::omp_when_context_kind_enum device_kind = c->get_device_kind();
+    if (device_kind != SgOmpClause::e_omp_when_context_kind_unknown) {
+        if (has_trait_set) {
+            curprint(string(", "));
+        };
+        if (!has_device) {
+            curprint(string("device={"));
+            has_device = true;
+        };
+        curprint(string("kind("));
+        switch (device_kind) {
+            case SgOmpClause::e_omp_when_context_kind_host: {
+                curprint(string("host"));
+                break;
+            }
+            case SgOmpClause::e_omp_when_context_kind_nohost: {
+                curprint(string("nohost"));
+                break;
+            }
+            case SgOmpClause::e_omp_when_context_kind_any: {
+                curprint(string("any"));
+                break;
+            }
+            case SgOmpClause::e_omp_when_context_kind_cpu: {
+                curprint(string("cpu"));
+                break;
+            }
+            case SgOmpClause::e_omp_when_context_kind_gpu: {
+                curprint(string("gpu"));
+                break;
+            }
+            case SgOmpClause::e_omp_when_context_kind_fpga: {
+                curprint(string("fpga"));
+                break;
+            }
+            default: {
+                ;
+            }
+        };
+        curprint(string(")"));
+    }
+    if (has_device) {
+        curprint(string("}"));
+        has_device = false;
+    };
+
+    bool has_implementation = false;
+    SgOmpClause::omp_when_context_vendor_enum implementation_vendor = c->get_implementation_vendor();
+    if (implementation_vendor != SgOmpClause::e_omp_when_context_vendor_unspecified) {
+        if (has_trait_set) {
+            curprint(string(", "));
+        };
+        if (!has_implementation) {
+            curprint(string("implementation={"));
+            has_implementation = true;
+        };
+        curprint(string("vendor("));
+        switch (implementation_vendor) {
+            case SgOmpClause::e_omp_when_context_vendor_amd: {
+                curprint(string("amd"));
+                break;
+            }
+            case SgOmpClause::e_omp_when_context_vendor_arm: {
+                curprint(string("arm"));
+                break;
+            }
+            case SgOmpClause::e_omp_when_context_vendor_bsc: {
+                curprint(string("bsc"));
+                break;
+            }
+            case SgOmpClause::e_omp_when_context_vendor_cray: {
+                curprint(string("cray"));
+                break;
+            }
+            case SgOmpClause::e_omp_when_context_vendor_fujitsu: {
+                curprint(string("fujitsu"));
+                break;
+            }
+            case SgOmpClause::e_omp_when_context_vendor_gnu: {
+                curprint(string("gnu"));
+                break;
+            }
+            case SgOmpClause::e_omp_when_context_vendor_ibm: {
+                curprint(string("ibm"));
+                break;
+            }
+            case SgOmpClause::e_omp_when_context_vendor_intel: {
+                curprint(string("intel"));
+                break;
+            }
+            case SgOmpClause::e_omp_when_context_vendor_llvm: {
+                curprint(string("llvm"));
+                break;
+            }
+            case SgOmpClause::e_omp_when_context_vendor_pgi: {
+                curprint(string("pgi"));
+                break;
+            }
+            case SgOmpClause::e_omp_when_context_vendor_ti: {
+                curprint(string("ti"));
+                break;
+            }
+            case SgOmpClause::e_omp_when_context_vendor_unknown: {
+                curprint(string("unknown"));
+                break;
+            }
+            default: {
+                ;
+            }
+        };
+        curprint(string(")"));
+    };
+    SgExpression* implementation_user_defined = c->get_implementation_user_defined();
+    if (implementation_user_defined != NULL) {
+        if (has_trait_set) {
+            curprint(string(", "));
+        };
+        if (!has_implementation) {
+            curprint(string("implementation={"));
+            has_implementation = true;
+        };
+        unparseExpression(implementation_user_defined, ninfo);
+    };
+    SgExpression* implementation_extension = c->get_implementation_extension();
+    if (implementation_extension != NULL) {
+        if (has_trait_set) {
+            curprint(string(", "));
+        };
+        if (!has_implementation) {
+            curprint(string("implementation={"));
+            has_implementation = true;
+        };
+        curprint(string("extension("));
+        unparseExpression(implementation_extension, ninfo);
+        curprint(string(")"));
+    };
+    if (has_implementation) {
+        curprint(string("}"));
+        has_device = false;
+    };
+
+    curprint(string(" : "));
+
+    SgStatement* variant_directive = c->get_variant_directive();
+    if (variant_directive != NULL) {
+      isVariant = true;
+      unparseOmpGenericStatement(variant_directive, info);
+      isVariant = false;
+    };
+    curprint(string(")"));
 }
 
 void UnparseLanguageIndependentConstructs::unparseOmpProcBindClause(SgOmpClause* clause, SgUnparse_Info& info)
@@ -7140,7 +7369,7 @@ void UnparseLanguageIndependentConstructs::unparseOmpScheduleClause(SgOmpClause*
 #if 1
 //! A helper function to convert reduction operators to strings
 // TODO put into a better place and expose it to users.
-static std::string reductionOperatorToString(SgOmpClause::omp_reduction_operator_enum ro)
+static std::string reductionIdentifierToString(SgOmpClause::omp_reduction_identifier_enum ro)
 {
   string result;
   switch (ro)
@@ -7236,7 +7465,90 @@ static std::string reductionOperatorToString(SgOmpClause::omp_reduction_operator
       }
     default:
       {
-        cerr<<"Error: unhandled operator type reductionOperatorToString():"<< ro <<endl;
+        cerr<<"Error: unhandled operator type reductionIdentifierToString():"<< ro <<endl;
+        ROSE_ASSERT(false);
+      }
+  }
+  return result;
+}
+
+static std::string reductionModifierToString(SgOmpClause::omp_reduction_modifier_enum rm)
+{
+  string result;
+  switch (rm)
+  {
+    case SgOmpClause::e_omp_reduction_inscan: 
+      {
+        result = "inscan";
+        break;
+      }
+    case SgOmpClause::e_omp_reduction_task: 
+      {
+        result = "task";
+        break;
+      }
+    case SgOmpClause::e_omp_reduction_default:   
+      {
+        result = "default";
+        break;
+      }
+    default:
+      {
+        cerr<<"Error: unhandled operator type reductionIdentifierToString():"<< rm <<endl;
+        ROSE_ASSERT(false);
+      }
+  }
+  return result;
+}
+
+static std::string allocateModifierToString(SgOmpClause::omp_allocate_modifier_enum modifier)
+{
+  string result;
+  switch (modifier)
+  {
+    case SgOmpClause::e_omp_allocate_default_mem_alloc:
+      {
+        result = "omp_default_mem_alloc";
+        break;
+      }
+    case SgOmpClause::e_omp_allocate_large_cap_mem_alloc:
+      {
+        result = "omp_large_cap_mem_alloc";
+        break;
+      }
+    case SgOmpClause::e_omp_allocate_const_mem_alloc:
+      {
+        result = "omp_const_mem_alloc";
+        break;
+      }
+    case SgOmpClause::e_omp_allocate_high_bw_mem_alloc:
+      {
+        result = "omp_high_bw_mem_alloc";
+        break;
+      }
+    case SgOmpClause::e_omp_allocate_low_lat_mem_alloc:
+      {
+        result = "omp_low_lat_mem_alloc";
+        break;
+      }
+    case SgOmpClause::e_omp_allocate_cgroup_mem_alloc:
+      {
+        result = "omp_cgroup_mem_alloc";
+        break;
+      }
+    case SgOmpClause::e_omp_allocate_pteam_mem_alloc:
+      {
+        result = "omp_pteam_mem_alloc";
+        break;
+      }
+    case SgOmpClause::e_omp_allocate_thread_mem_alloc:
+      {
+        result = "omp_thread_mem_alloc";
+        break;
+      }
+    default:
+      {
+        cerr << "Error: unhandled operator type allocateModifierToString():" << modifier << endl;
         ROSE_ASSERT(false);
       }
   }
@@ -7397,11 +7709,24 @@ void UnparseLanguageIndependentConstructs::unparseOmpVariablesClause(SgOmpClause
     case V_SgOmpReductionClause:
       {
         curprint(string(" reduction("));
-        //reductionOperatorToString() will handle language specific issues 
-        curprint(reductionOperatorToString(isSgOmpReductionClause(c)->get_operation()));
+        //reductionIdentifierToString() will handle language specific issues 
+        SgOmpClause::omp_reduction_modifier_enum modifier = isSgOmpReductionClause(c)->get_modifier();
+        if (modifier != SgOmpClause::e_omp_reduction_modifier_unknown) {
+            curprint(reductionModifierToString(modifier));
+            curprint(string(", "));
+        };
+        SgOmpClause::omp_reduction_identifier_enum identifier = isSgOmpReductionClause(c)->get_identifier();
+        if (identifier != SgOmpClause::e_omp_reduction_user_defined_identifier) {
+            curprint(reductionIdentifierToString(identifier));
+        }
+        else {
+            SgUnparse_Info new_info(info);
+            unparseExpression(isSgOmpReductionClause(c)->get_user_defined_identifier(), new_info);
+        };
         curprint(string(" : "));
         break;
       }
+
     case V_SgOmpDependClause:
       {
         curprint(string(" depend("));
@@ -7556,6 +7881,164 @@ void UnparseLanguageIndependentConstructs::unparseOmpVariablesClause(SgOmpClause
   curprint(string(")"));
 }
 
+//! Unparse an OpenMP complex clause with a variable list
+void UnparseLanguageIndependentConstructs::unparseOmpVariablesComplexClause(SgOmpClause* clause, SgUnparse_Info& info)
+{
+  ROSE_ASSERT(clause != NULL);
+  SgOmpVariablesClause* c= isSgOmpVariablesClause (clause);
+  ROSE_ASSERT(c!= NULL);
+  bool is_map = false;
+  bool is_depend= false;
+  // unparse the  clause name first
+  switch (c->variantT())
+  {
+    case V_SgOmpAllocateClause: {
+        curprint(string(" allocate("));
+        //allocateModifierToString() will handle language specific issues
+        SgOmpClause::omp_allocate_modifier_enum modifier = isSgOmpAllocateClause(c)->get_modifier();
+        if (modifier != SgOmpClause::e_omp_allocate_modifier_unknown) {
+            if (modifier == SgOmpClause::e_omp_allocate_user_defined_modifier) {
+                SgUnparse_Info new_info(info);
+                unparseExpression(isSgOmpAllocateClause(c)->get_user_defined_modifier(), new_info);
+            }
+            else {
+                curprint(allocateModifierToString(modifier));
+            }
+            curprint(string(" : "));
+        }
+        break;
+    }
+    default:
+      cerr<<"Error: unhandled clause type in UnparseLanguageIndependentConstructs::unparseOmpVariablesClause ():"<< clause->class_name()<<endl;
+      ROSE_ASSERT(false);
+      break;
+  }
+
+  // prepare array dimension info for map variables
+  std::map<SgSymbol*, std::vector<std::pair<SgExpression*, SgExpression*> > > dims;
+  std::map< SgSymbol *, std::vector< std::pair< SgOmpClause::omp_map_dist_data_enum, SgExpression * > > > dist_policies;
+  if (is_map)
+  {
+    SgOmpMapClause * m_clause = isSgOmpMapClause (clause);
+    ROSE_ASSERT (m_clause != NULL);
+    dims = m_clause->get_array_dimensions();
+    dist_policies = m_clause->get_dist_data_policies();
+  }
+  else if (is_depend) // task depend(A[i:BS][j:BS]) , is also stored as array section.
+   // TODO: long term, we need a dedicated array section AST node
+  {
+    SgOmpDependClause* m_clause = isSgOmpDependClause (clause);
+    ROSE_ASSERT (m_clause != NULL);
+    dims = m_clause->get_array_dimensions();
+  }
+
+  //unparse variable list then
+  SgExpressionPtrList::iterator p = c->get_variables()->get_expressions().begin();
+  while ( p != c->get_variables()->get_expressions().end() )
+  {
+    // We now try to put array reference expression into variable list.
+    if (SgPntrArrRefExp* aref = isSgPntrArrRefExp(*p))
+    {
+      // curprint (aref->unparseToString()); // This does not work!
+      SgUnparse_Info ninfo(info);
+      unparseExpression(aref, ninfo);
+    }
+    else if (SgVarRefExp* vref= isSgVarRefExp(*p))
+    {
+      SgInitializedName* init_name = vref->get_symbol()->get_declaration();
+      SgName tmp_name  = init_name->get_name();
+      curprint( tmp_name.str());
+      SgVariableSymbol * sym  = isSgVarRefExp(*p)->get_symbol();
+      ROSE_ASSERT (sym != NULL);
+      if (is_map)
+      {
+        std::vector<std::pair<SgExpression*, SgExpression*> > bounds = dims[sym];
+        if (bounds.size() >0)
+        {
+          std::vector<std::pair<SgExpression*, SgExpression*> >:: const_iterator iter;
+          for (iter = bounds.begin(); iter != bounds.end(); iter ++)
+          {
+            SgUnparse_Info ninfo(info);
+            std::pair<SgExpression*, SgExpression*> bound  = (*iter);
+            SgExpression* lower = bound.first;
+            SgExpression* upper = bound.second;
+            ROSE_ASSERT (lower != NULL);
+            ROSE_ASSERT (upper != NULL);
+
+            curprint(string("["));
+            //          curprint(lower->unparseToString());
+            unparseExpression(lower, ninfo);
+            curprint(string(":"));
+            //          curprint(upper->unparseToString());
+            unparseExpression(upper, ninfo);
+            curprint(string("]"));
+
+            std::vector< std::pair< SgOmpClause::omp_map_dist_data_enum, SgExpression * > > policies = dist_policies[sym];
+            if (policies.size() !=0)
+              unparseMapDistDataPoliciesToString (policies, ninfo);
+            //curprint(mapDistDataPoliciesToString (policies));
+
+          } // end for
+        } // end if has bounds
+      } // end if map
+      else if (is_depend)
+      {
+        std::vector<std::pair<SgExpression*, SgExpression*> > bounds = dims[sym];
+        if (bounds.size() >0)
+        {
+          std::vector<std::pair<SgExpression*, SgExpression*> >:: const_iterator iter;
+          for (iter = bounds.begin(); iter != bounds.end(); iter ++)
+          {
+            SgUnparse_Info ninfo(info);
+            std::pair<SgExpression*, SgExpression*> bound  = (*iter);
+            SgExpression* lower = bound.first;
+            SgExpression* upper = bound.second;
+            ROSE_ASSERT (lower != NULL);
+            ROSE_ASSERT (upper != NULL);
+
+            curprint(string("["));
+            unparseExpression(lower, ninfo);
+            curprint(string(":"));
+            unparseExpression(upper, ninfo);
+            curprint(string("]"));
+          } // end for
+        } // end if has bounds
+      }
+    }
+    else
+    {
+      cerr<<"Unhandled type of variable in a varlist:"<< (*p)->class_name()<<endl;
+      ROSE_ASSERT (false);
+    }
+
+    // output the optional dimension info for map() variable
+    // Move to the next argument
+    p++;
+
+    // Check if this is the last argument (output a "," separator if not)
+    if (p != c->get_variables()->get_expressions().end())
+    {
+      curprint( ",");
+    }
+  }
+
+  // optional :step  for linear(list:step)
+  if (isSgOmpLinearClause(c) && isSgOmpLinearClause(c)->get_step())
+  {
+    curprint(string(":"));
+    unparseExpression(isSgOmpLinearClause(c)->get_step(), info);
+  }
+
+   // optional :alignment for aligned(list:alignment)
+  if (isSgOmpAlignedClause(c) && isSgOmpAlignedClause(c)->get_alignment())
+  {
+    curprint(string(":"));
+    unparseExpression(isSgOmpAlignedClause(c)->get_alignment(), info);
+  }
+
+  curprint(string(")"));
+}
+
 void UnparseLanguageIndependentConstructs::unparseOmpExpressionClause(SgOmpClause* clause, SgUnparse_Info& info)
 {
   ROSE_ASSERT(clause != NULL);
@@ -7574,8 +8057,12 @@ void UnparseLanguageIndependentConstructs::unparseOmpExpressionClause(SgOmpClaus
 
   if (isSgOmpCollapseClause(c))
     curprint(string(" collapse("));
-  else if (isSgOmpIfClause(c))
+  else if (isSgOmpIfClause(c)) {
     curprint(string(" if("));
+    if (isSgOmpIfClause(c)->get_modifier() == SgOmpClause::e_omp_if_parallel) {
+        curprint(string("parallel : "));
+    }
+  }
   else if (isSgOmpOrderedClause(c))
     curprint(string(" ordered("));
   else if (isSgOmpFinalClause(c))
@@ -7691,6 +8178,10 @@ void UnparseLanguageIndependentConstructs::unparseOmpClause(SgOmpClause* clause,
         unparseOmpExpressionClause(isSgOmpExpressionClause(clause), info);
         break; 
       }                       
+    case V_SgOmpAllocateClause: {
+        unparseOmpVariablesComplexClause(isSgOmpVariablesClause(clause), info);
+        break;
+      }
     case V_SgOmpCopyprivateClause:
     case V_SgOmpCopyinClause:
     case V_SgOmpFirstprivateClause:
@@ -7707,6 +8198,11 @@ void UnparseLanguageIndependentConstructs::unparseOmpClause(SgOmpClause* clause,
         unparseOmpVariablesClause(isSgOmpVariablesClause(clause), info);
         break;
       }     
+    case V_SgOmpWhenClause:
+      {
+        unparseOmpWhenClause(isSgOmpWhenClause(clause), info);
+        break;
+      }
    default:
       {
         cerr<<"Unhandled OpenMP clause type in UnparseLanguageIndependentConstructs::unparseOmpClause():"<<clause->class_name()<<endl;
@@ -7825,72 +8321,69 @@ void UnparseLanguageIndependentConstructs::unparseOmpThreadprivateStatement(SgSt
 void UnparseLanguageIndependentConstructs::unparseOmpDirectivePrefixAndName (SgStatement* stmt,     SgUnparse_Info& info)
 {
   ROSE_ASSERT(stmt != NULL);
-  unp->u_sage->curprint_newline();
+  if (!isVariant) {
+    unp->u_sage->curprint_newline();
+    unparseOmpPrefix(info);
+  };
   switch (stmt->variantT())
   {
       case V_SgOmpAtomicStatement:
       {
-        unparseOmpPrefix(info);
         curprint(string ("atomic "));
         break;
       }
       case V_SgOmpSectionStatement:
       {
-        unparseOmpPrefix(info);
         curprint(string ("section "));
         break;
       }
       case V_SgOmpTaskStatement:
       {
-        unparseOmpPrefix(info);
         curprint(string ("task "));
         break;
       }
        case V_SgOmpTaskwaitStatement:
       {
-        unparseOmpPrefix(info);
         curprint(string ("taskwait "));
         break;
       }
      case V_SgOmpFlushStatement:
       {
-        unparseOmpPrefix(info);
         curprint(string ("flush "));
         break;
       }
       case V_SgOmpThreadprivateStatement:
       {
-        unparseOmpPrefix(info);
         curprint(string ("threadprivate "));
         break;
       }
      case V_SgOmpBarrierStatement:
       {
-        unparseOmpPrefix(info);
         curprint(string ("barrier "));
+        break;
+      }
+    case V_SgOmpMetadirectiveStatement:
+      {
+        curprint(string ("metadirective "));
         break;
       }
     case V_SgOmpParallelStatement:
       {
-        unparseOmpPrefix(info);
         curprint(string ("parallel "));
         break;
       }
     case V_SgOmpTargetStatement:
       {
-        unparseOmpPrefix(info);
         curprint(string ("target "));
         break;
       }
     case V_SgOmpTargetDataStatement:
       {
-        unparseOmpPrefix(info);
         curprint(string ("target data "));
         break;
       }
      case V_SgOmpCriticalStatement:
       {
-        unparseOmpPrefix(info);
         curprint(string ("critical "));
         if (isSgOmpCriticalStatement(stmt)->get_name().getString()!="")
         {
@@ -7902,61 +8395,51 @@ void UnparseLanguageIndependentConstructs::unparseOmpDirectivePrefixAndName (SgS
       }
          case V_SgOmpForStatement:
       {
-        unparseOmpPrefix(info);
         curprint(string ("for "));
         break;
       }
          case V_SgOmpForSimdStatement:
       {
-        unparseOmpPrefix(info);
         curprint(string ("for simd "));
         break;
       }
         case V_SgOmpDoStatement:
       {
-        unparseOmpPrefix(info);
         curprint(string ("do "));
         break;
       }
        case V_SgOmpMasterStatement:
       {
-        unparseOmpPrefix(info);
         curprint(string ("master "));
         break;
       }
       case V_SgOmpOrderedStatement:
       {
-        unparseOmpPrefix(info);
         curprint(string ("ordered "));
         break;
       }
     case V_SgOmpWorkshareStatement:
       {
-        unparseOmpPrefix(info);
         curprint(string ("workshare "));
         break;
       }
       case V_SgOmpSingleStatement:
       {
-        unparseOmpPrefix(info);
         curprint(string ("single "));
         break;
       }
       case V_SgOmpSimdStatement:
       {
-        unparseOmpPrefix(info);
         curprint(string ("simd"));
         break;
       }
       case V_SgOmpDeclareSimdStatement:
       {
-        unparseOmpPrefix(info);
         curprint(string ("declare simd"));
         break;
       }
      case V_SgOmpSectionsStatement:
       {
-        unparseOmpPrefix(info);
         curprint(string ("sections "));
         break;
       }
@@ -7999,13 +8482,22 @@ void UnparseLanguageIndependentConstructs::unparseOmpGenericStatement (SgStateme
   ROSE_ASSERT(stmt != NULL);
   // unparse the begin directive
   unparseOmpDirectivePrefixAndName (stmt, info);
+  // unparse the parentheses of construct directive
+  if (isConstruct) {
+    curprint(string ("("));
+  };
   // unparse the begin directive's clauses
   unparseOmpBeginDirectiveClauses(stmt, info);
-  unp->u_sage->curprint_newline();
-
+  // unparse the parentheses of construct directive
+  if (isConstruct) {
+    curprint(string (")"));
+  };
+  if (!isVariant) {
+    unp->u_sage->curprint_newline();
+  };
   // unparse the body, if exists. 
   SgOmpBodyStatement* b_stmt = isSgOmpBodyStatement(stmt);
-  if (b_stmt)
+  if (!isVariant && b_stmt)
   {
     SgUnparse_Info ninfo(info);
     unparseStatement(b_stmt->get_body(), ninfo);

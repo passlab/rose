@@ -112,6 +112,15 @@ none            { return cond_return ( NONE ); }
 reduction       { return cond_return ( REDUCTION ); }
 min             { return cond_return ( MIN ); }
 max             { return cond_return ( MAX ); }
+omp_default_mem_alloc    { return cond_return ( OMP_DEFAULT_MEM_ALLOC ); } /* OpenMP 5.0 allocator */
+omp_large_cap_mem_alloc    { return cond_return ( OMP_LARGE_CAP_MEM_ALLOC ); } /* OpenMP 5.0 allocator */
+omp_const_mem_alloc    { return cond_return ( OMP_CONST_MEM_ALLOC ); } /* OpenMP 5.0 allocator */
+omp_high_bw_mem_alloc    { return cond_return ( OMP_HIGH_BW_MEM_ALLOC ); } /* OpenMP 5.0 allocator */
+omp_low_lat_mem_alloc    { return cond_return ( OMP_LOW_LAT_MEM_ALLOC ); } /* OpenMP 5.0 allocator */
+omp_cgroup_mem_alloc    { return cond_return ( OMP_CGROUP_MEM_ALLOC ); } /* OpenMP 5.0 allocator */
+omp_pteam_mem_alloc    { return cond_return ( OMP_PTEAM_MEM_ALLOC ); } /* OpenMP 5.0 allocator */
+omp_thread_mem_alloc    { return cond_return ( OMP_THREAD_MEM_ALLOC ); } /* OpenMP 5.0 allocator */
+inscan          { return cond_return ( INSCAN ); }
 copyin          { return cond_return ( COPYIN ); }
 inbranch        { return cond_return ( INBRANCH ); }
 notinbranch     { return cond_return ( NOTINBRANCH ); }
@@ -137,6 +146,7 @@ update          {return cond_return ( UPDATE ); }
 map             {return cond_return ( MAP ); }
 device          {return cond_return ( DEVICE ); }
 alloc           {return cond_return ( ALLOC ); }
+allocate        {return cond_return ( ALLOCATE ); }
 to              {return cond_return ( TO ); /* change the user level keyword to conform to  OpenMP 4.0 */}
 from            {return cond_return ( FROM ); }
 tofrom          {return cond_return ( TOFROM ); }
@@ -161,7 +171,7 @@ BLOCK           {return ( BLOCK ); }
 DUPLICATE       {return ( DUPLICATE ); }
 CYCLIC          {return ( CYCLIC ); }
 
-"="             { return('='); }
+"="             { return ('='); }
 "("             { return ('('); }
 ")"             { return (')'); }
 "["             { return ('['); }

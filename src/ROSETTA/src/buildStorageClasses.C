@@ -861,7 +861,12 @@ AstNodeClass::evaluateType(std::string& varTypeString)
                  ( varTypeString == "SgOmpClause::omp_proc_bind_policy_enum" ) ||
                  ( varTypeString == "SgOmpClause::omp_atomic_clause_enum" ) ||
                  ( varTypeString == "SgOmpClause::omp_schedule_kind_enum" ) ||
-                 ( varTypeString == "SgOmpClause::omp_reduction_operator_enum" ) ||
+                 ( varTypeString == "SgOmpClause::omp_reduction_identifier_enum" ) ||
+                 ( varTypeString == "SgOmpClause::omp_reduction_modifier_enum" ) ||
+                 ( varTypeString == "SgOmpClause::omp_when_context_kind_enum" ) ||
+                 ( varTypeString == "SgOmpClause::omp_when_context_vendor_enum" ) ||
+                 ( varTypeString == "SgOmpClause::omp_if_modifier_enum" ) ||
+                 ( varTypeString == "SgOmpClause::omp_allocate_modifier_enum" ) ||
                  ( varTypeString == "SgOmpClause::omp_dependence_type_enum" ) ||
                  ( varTypeString == "SgOmpClause::omp_map_operator_enum" ) ||
                  ( varTypeString == "SgOmpClause::omp_map_dist_data_enum" ) ||

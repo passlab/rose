@@ -279,6 +279,31 @@ namespace OmpSupport
     }
   }
 
+    ComplexClause* OmpAttribute::addComplexClause(omp_construct_enum clause_type) {
+        if (isClause(clause_type)) {
+        //We only store a clause type once
+        //Logically, the content will be merged into the first occurrence.
+            if (!hasClause(clause_type)) {
+                clause_map[clause_type]=true;
+                clauses.push_back(clause_type);
+                // initialize an empty deque of specific clause.
+                complex_clauses[clause_type] = new std::deque<ComplexClause>;
+                ROSE_ASSERT(clause_type == clauses[clauses.size()-1]);
+            }
+
+            // initialize an empty clause in specific clause deque.
+            ComplexClause* new_clause = new ComplexClause();
+            complex_clauses[clause_type]->push_back(*new_clause);
+            // garbage collection.
+            delete new_clause;
+            return &complex_clauses[clause_type]->back();
+        }
+        else {
+            cerr<<"OmpAttribute::addClause(): Unrecognized clause type:"<<OmpSupport::toString(clause_type)<<endl;
+            ROSE_ASSERT(false);
+        }
+    }
+
   //! Get a vector of clauses existing in the directive
   // We only maintain a map internally, so generated the vector on the fly   
   // This implementation detail is hidden from users, can be changed any time   
@@ -303,6 +328,15 @@ namespace OmpSupport
        if (hasClause(e_untied))  result.push_back(e_untied);
        */
     return clauses;
+  }
+
+  std::deque<ComplexClause>* OmpAttribute::getComplexClauses (omp_construct_enum clause_type) {
+        if (complex_clauses.find(clause_type) == complex_clauses.end()) {
+            return NULL;
+        }
+        else {
+            return complex_clauses[clause_type];
+        };
   }
 
   //! Get the associated SgPragmaDeclaration
@@ -355,20 +389,8 @@ namespace OmpSupport
     ROSE_ASSERT (varExp);
     varString=varExp->unparseToString();
 
-    //Special handling for reduction clauses
-    if (targetConstruct == e_reduction)
-    {
-      cerr<<"Fatal: cannot add variables into e_reduction, You have to specify e_reduction_operatorX instead!"<<endl;
-      assert(false);
-    } 
-    if (isReductionOperator(targetConstruct))
-    {
-      addClause(e_reduction);
-      setReductionOperator(targetConstruct);
-    }  
-
     // Try to resolve the variable reference expression's symbol
-      //resolve the variable here
+    // resolve the variable here
     if (SgPntrArrRefExp * aref = isSgPntrArrRefExp(varExp))
     {
       SgExpression* lhs = NULL; 
@@ -415,17 +437,6 @@ namespace OmpSupport
   SgVariableSymbol* OmpAttribute::addVariable(omp_construct_enum targetConstruct, const std::string& varString, SgInitializedName* sgvar/*=NULL*/)
   {
     SgVariableSymbol* symbol = NULL;
-    //Special handling for reduction clauses
-    if (targetConstruct == e_reduction)
-    {
-      cerr<<"Fatal: cannot add variables into e_reduction, You have to specify e_reduction_operatorX instead!"<<endl;
-      assert(false);
-    } 
-    if (isReductionOperator(targetConstruct))
-    {
-      addClause(e_reduction);
-      setReductionOperator(targetConstruct);
-    }  
     // Try to resolve the variable if SgInitializedName is not provided
     if ((sgvar == NULL)&&(mNode!=NULL))
     {
@@ -488,6 +499,47 @@ namespace OmpSupport
     return symbol;   
   }
 
+  SgVariableSymbol* OmpAttribute::addComplexClauseVariable(ComplexClause* target_clause, const std::string& varString, SgInitializedName* sgvar/*=NULL*/) {
+    SgVariableSymbol* symbol = NULL;
+    // Try to resolve the variable if SgInitializedName is not provided
+    if ((sgvar == NULL)&&(mNode!=NULL))
+    {
+      SgScopeStatement* scope = SageInterface::getScope(mNode);
+     
+      ROSE_ASSERT(scope!=NULL);
+      //resolve the variable here
+      symbol = lookupVariableSymbolInParentScopes (varString, scope);
+      if (symbol == NULL)          
+      {
+        cerr<<"Error: OmpAttribute::addVariable() cannot find symbol for variable:"<<varString<<endl;
+        ROSE_ASSERT(symbol!= NULL);
+      }
+      else 
+        sgvar = symbol->get_declaration();
+    } 
+
+    if (sgvar != NULL)
+    {
+      symbol = isSgVariableSymbol(sgvar->get_symbol_from_symbol_table());
+      // Liao, 3/7/2013. this may end up with infinite search through cyclic graph.
+      //symbol = isSgVariableSymbol(sgvar->search_for_symbol_from_symbol_table ());
+    }
+
+    //debug clause var_list
+    // if (targetConstruct== e_copyin) cout<<"debug: adding variable to copyin()"<<endl;
+    std::pair <std::string, SgNode*> current_variable = make_pair(varString, sgvar);
+    // check if there's duplicated variable in O(n) time, which is simple but not efficient.
+    if (std::find(target_clause->variable_list.begin(), target_clause->variable_list.end(), current_variable) == target_clause->variable_list.end()) {
+        target_clause->variable_list.push_back(current_variable);
+    };
+    // maintain the var-clause map also
+    //var_clauses[varString].push_back(targetConstruct);
+    // Don't forget this! But directive like threadprivate could have variable list also
+    //if (isClause(targetConstruct)) 
+    //  addClause(targetConstruct);
+    return symbol;   
+  }
+
   //! Set name for named critical section
   void OmpAttribute::setCriticalName(const std::string & varname)
   {
@@ -503,10 +555,37 @@ namespace OmpSupport
       sgexp->set_parent(mNode); // a little hack here, we not yet extend the SgPragmaDeclaration to have expression children.
   }
 
+  //! Expression of complex clause
+  void OmpAttribute::addComplexClauseExpression(omp_construct_enum targetConstruct, const std::string& expString, SgExpression* sgexp/* =NULL */)
+  {
+    complex_clauses[targetConstruct]->back().expression = make_pair(expString, sgexp);
+    if (sgexp!=NULL)
+      sgexp->set_parent(mNode); // a little hack here, we not yet extend the SgPragmaDeclaration to have expression children.
+  }
+
+  //! User defined parameter
+  void OmpAttribute::addUserDefinedParameter(omp_construct_enum targetConstruct, const std::string& expString, SgExpression* sgexp/* =NULL */)
+  {
+    complex_clauses[targetConstruct]->back().user_defined_parameter = make_pair(expString, sgexp);
+    if (sgexp != NULL)
+      sgexp->set_parent(mNode); // a little hack here, we not yet extend the SgPragmaDeclaration to have expression children.
+    // Do we need to implement this?
+  }
+
   std::pair<std::string, SgExpression*>
     OmpAttribute::getExpression(omp_construct_enum targetConstruct)
     {
       return expressions[targetConstruct];
+    }
+
+  std::pair<std::string, SgExpression*>
+    OmpAttribute::getComplexClauseExpression(ComplexClause* target_clause) {
+        return target_clause->expression;
+    }
+
+  std::pair<std::string, SgExpression*>
+    OmpAttribute::getUserDefinedParameter(ComplexClause* target_clause) {
+        return target_clause->user_defined_parameter;
     }
 
   // default () value
@@ -592,6 +671,23 @@ namespace OmpSupport
     if (hit == reduction_operators.end())   
       reduction_operators.push_back(operatorx);
   }
+
+  void OmpAttribute::setComplexClauseFirstParameter(ComplexClause* target_clause, omp_construct_enum parameter) {
+    target_clause->first_parameter = parameter;
+  }
+
+  void OmpAttribute::setComplexClauseSecondParameter(ComplexClause* target_clause, omp_construct_enum parameter) {
+    target_clause->second_parameter = parameter;
+  }
+
+  omp_construct_enum OmpAttribute::getComplexClauseFirstParameter (ComplexClause* target_clause) {
+    return target_clause->first_parameter;
+  }
+
+  omp_construct_enum OmpAttribute::getComplexClauseSecondParameter (ComplexClause* target_clause) {
+    return target_clause->second_parameter;
+  }
+
   // 
   std::vector<omp_construct_enum> OmpAttribute::getReductionOperators()
   {
@@ -799,7 +895,6 @@ namespace OmpSupport
       case e_reduction_ior: result = "ior"; break;
       case e_reduction_ieor: result = "ieor"; break;
 
-
       case e_schedule_none: result = "not-specified"; break;
       case e_schedule_static: result = "static"; break;
       case e_schedule_dynamic: result = "dynamic"; break;
@@ -839,6 +934,8 @@ namespace OmpSupport
 
       case e_final : result = "final";   break;
       case e_priority: result = "priority";   break;
+
+      case e_allocate: result = "allocate";   break;
 
       case e_not_omp: result = "not_omp"; break;
       default: 
@@ -1160,6 +1257,7 @@ namespace OmpSupport
 
       case e_ordered_clause:
       case e_reduction:
+
       case e_schedule:
       case e_collapse:
       case e_untied:
@@ -1188,6 +1286,8 @@ namespace OmpSupport
       case e_notinbranch:
 
       case e_depend:
+      // OpenMP 5.0 new clause
+      case e_allocate:
         result = true; 
         break;
       default:
@@ -1348,7 +1448,7 @@ namespace OmpSupport
       } 
       // optional variable lists
       else if ((omp_type == e_copyprivate)||
-          (omp_type ==e_private)||
+          (omp_type == e_private)||
           (omp_type == e_firstprivate)||
           (omp_type == e_shared)||
           (omp_type == e_copyin)||
@@ -1523,11 +1623,12 @@ namespace OmpSupport
   std::vector<std::pair<std::string,SgNode* > > 
     OmpAttribute::getVariableList(omp_construct_enum targetConstruct)
     {
-      std::vector<std::pair<std::string,SgNode* > > * result = new std::vector<std::pair<std::string,SgNode* > >; 
+      //std::vector<std::pair<std::string,SgNode* > > * result = new std::vector<std::pair<std::string,SgNode* > >; 
       // e_reduction is a collective concept, 
       // There may have multiple reduction clauses for different operations.
       // return all of them. Return special one if e_reduction_operatorX is used
-      if (targetConstruct==e_reduction)
+      //if (targetConstruct==e_reduction)
+      /*if (targetConstruct == e_unknown)
       {
         std::vector<omp_construct_enum> ops = getReductionOperators();
         std::vector<omp_construct_enum>::iterator iter = ops.begin();
@@ -1541,8 +1642,9 @@ namespace OmpSupport
             result->push_back(*iter2);
         }  
         return *result;
+        return complex_clauses[complex_clause_index]->variable_list;
       } 
-      else
+      else*/
         return variable_lists[targetConstruct];
     }
   //! Check if a variable list is associated with a construct
@@ -1696,7 +1798,6 @@ namespace OmpSupport
 
         string pragma_str= att->toOpenMPString();
         SgPragmaDeclaration * pragma = SageBuilder::buildPragmaDeclaration("omp "+ pragma_str);
-        //cout<<"insert pragma before a loop ..."<<endl;
         SageInterface::insertStatementBefore(cur_stmt, pragma);
       }
     } // if (attlist)

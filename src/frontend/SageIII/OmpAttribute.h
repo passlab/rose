@@ -17,6 +17,7 @@
 #include <map>
 #include <cassert>
 #include <vector>
+#include <deque>
 class SgNode;
 /** Types and functions to support OpenMP
 *
@@ -162,6 +163,14 @@ namespace OmpSupport
     e_reduction_ior,
     e_reduction_ieor,
 
+    // reduction modifiers in OpenMP 5.0
+    e_reduction_inscan,
+    e_reduction_task,
+    e_reduction_default,
+    
+    // enum for all the user defined parameters
+    e_user_defined_parameter,
+
     //5 schedule policies for
     //---------------------
     e_schedule_none,
@@ -198,6 +207,17 @@ namespace OmpSupport
     e_depend_in, 
     e_depend_out, 
     e_depend_inout, 
+
+    // OpenMP 5.0 clause
+    e_allocate,
+    e_allocate_default_mem_alloc,
+    e_allocate_large_cap_mem_alloc,
+    e_allocate_const_mem_alloc,
+    e_allocate_high_bw_mem_alloc,
+    e_allocate_low_lat_mem_alloc,
+    e_allocate_cgroup_mem_alloc,
+    e_allocate_pteam_mem_alloc,
+    e_allocate_thread_mem_alloc,
 
     // not an OpenMP construct
     e_not_omp
@@ -236,6 +256,24 @@ namespace OmpSupport
 
   //! Check if an OpenMP construct is a dependence type for omp task depend 
   bool isDependenceType(omp_construct_enum omp_type);
+
+  // We use objects of this class to store parameters of those clauses that take one or two additional
+  // parameters other than variable or expression list. E.g. reduction([reduction_modifier,]reduction_identifier:list).
+  // We call this kind of clause as ComplexClause, compared with other clauses which just take one parameter or a list
+  // of variable/expression.
+  class ComplexClause {
+
+    public:
+      omp_construct_enum first_parameter;
+      omp_construct_enum second_parameter;
+      omp_construct_enum third_parameter;
+      std::pair < std::string, SgExpression* > user_defined_parameter;
+      std::pair < std::string, SgExpression* > expression;
+      std::vector < std::pair < std::string, SgNode* > > variable_list;
+
+      ComplexClause(omp_construct_enum first=e_unknown, omp_construct_enum second=e_unknown, omp_construct_enum third=e_unknown) : first_parameter(first), second_parameter(second), third_parameter(third) {};
+
+  };
 
   class OmpAttribute;
   //! Some utility functions to manipulate OmpAttribute
@@ -344,12 +382,18 @@ namespace OmpSupport
       //! Get all existing clauses
       std::vector<omp_construct_enum> getClauses();
 
+      ComplexClause* addComplexClause (omp_construct_enum clause_type);
+      SgVariableSymbol* addComplexVariable (omp_construct_enum, const std::string&, SgInitializedName*);
+
       //!--------var list --------------
       //! Add a variable into a variable list of an OpenMP construct ,return the symbol of the variable added, if possible
       SgVariableSymbol* addVariable(omp_construct_enum targetConstruct, const std::string& varString, SgInitializedName* sgvar=NULL);
 
       //! Add a variable ref expression to a clause: this is useful for  array reference expression. A single variable symbol is not sufficient 
       SgVariableSymbol* addVariable(omp_construct_enum targetConstruct, SgExpression* varExp);
+
+      // add variable for the complex clause.
+      SgVariableSymbol* addComplexClauseVariable(ComplexClause* target_clause, const std::string& varString, SgInitializedName* sgvar=NULL);
 
       //! Check if a variable list is associated with a construct
       bool hasVariableList(omp_construct_enum);
@@ -385,6 +429,17 @@ namespace OmpSupport
       std::pair<std::string, SgExpression*>  
         getExpression(omp_construct_enum targetConstruct);
 
+      //! Add an expression to a complex clause
+      void addComplexClauseExpression(omp_construct_enum targetConstruct, const std::string& expString, SgExpression* sgexp=NULL); 
+
+      void addUserDefinedParameter(omp_construct_enum targetConstruct, const std::string& expString, SgExpression* sgexp=NULL);
+
+      //! Get expression of a complex clause
+      std::pair<std::string, SgExpression*> getComplexClauseExpression(ComplexClause* target_clause);
+
+      //! Get user defined parameter of a complex clause
+      std::pair<std::string, SgExpression*> getUserDefinedParameter(ComplexClause* target_clause);
+
       //!--------values for some clauses ----------
       //
       // Reduction needs special handling 
@@ -393,6 +448,12 @@ namespace OmpSupport
 
       // Add a new reduction clause with the specified operator
       void setReductionOperator(omp_construct_enum operatorx);
+
+      void setComplexClauseFirstParameter(ComplexClause* target_clause, omp_construct_enum parameter);
+      void setComplexClauseSecondParameter(ComplexClause* target_clause, omp_construct_enum parameter);
+      omp_construct_enum getComplexClauseFirstParameter (ComplexClause* target_clause);
+      omp_construct_enum getComplexClauseSecondParameter (ComplexClause* target_clause);
+      std::deque<ComplexClause>* getComplexClauses (omp_construct_enum clause_type);
 
       //! Get reduction clauses for each operations,  reduction(op:kind)
       std::vector<omp_construct_enum> getReductionOperators();
@@ -410,8 +471,7 @@ namespace OmpSupport
       //! Check if a depend type exists
       bool hasDependenceType(omp_construct_enum operatorx);
 
-
-      // map clause is similar to reduction clause, 
+      // map clause is similar to reduction clause,
       //
       // Add a new map clauses with the specified variant type
       void setMapVariant(omp_construct_enum operatorx);
@@ -452,6 +512,7 @@ namespace OmpSupport
       
       //!
       bool get_isUserDefined() {return isUserDefined; }
+
 
       //! Convert OmpAttribute to a legal OpenMP pragma string, 
       //not named toString() to void ambiguous with OmpAttribute::toString()
@@ -505,6 +566,8 @@ namespace OmpSupport
       // Some clauses are allowed to appear more than once, merge the content into the first occurrence in our implementation.
       std::vector<omp_construct_enum> clauses;
       std::map<omp_construct_enum,bool> clause_map;
+
+      std::map<omp_construct_enum, std::deque<ComplexClause>* > complex_clauses;
 
       // Multiple reduction clauses, each has a different operator
       //value for reduction operation: + -, * & | etc

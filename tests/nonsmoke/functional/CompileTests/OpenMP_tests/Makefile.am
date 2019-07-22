@@ -100,8 +100,11 @@ C_TESTCODES_REQUIRED_TO_PASS = \
 	ordered.c \
 	orphaned-directives.c \
 	parallel.c \
+	parallel_allocate_predefined_modifier.c \
+	parallel_allocate_user_modifier.c \
 	parallel-if.c \
 	parallel-if-numthreads.c \
+	parallel_if_parallel.c \
 	parallel-numthreads.c \
 	parallel-reduction.c \
 	parallel-reduction2.c \
@@ -119,6 +122,8 @@ C_TESTCODES_REQUIRED_TO_PASS = \
 	reduction.c \
 	reduction-classic.c \
 	reduction_min_max.c \
+	reduction_modifier.c \
+	reduction_user_identifier.c \
 	rice1.c \
 	section.c \
 	section1.c \
@@ -259,7 +264,7 @@ PASSING_C_CXX_ACC_TEST_OUTPUT_DIFF=$(addsuffix .diff, $(PASSING_C_CXX_ACC_TEST_O
 REFERENCE_PATH=$(top_srcdir)/tests/nonsmoke/functional/CompileTests/OpenMP_tests/referenceResults
 
 $(PASSING_C_CXX_ACC_TEST_OUTPUT_DIFF): %.diff:%
-	if diff $(@:.output.diff=.output) $(REFERENCE_PATH)/$(@:.output.diff=.output) > $@ ; then echo "Test Passed" ; else echo "Files differ; test falied"; rm -rf $@; exit 1; fi
+	if diff $(@:.output.diff=.output) $(REFERENCE_PATH)/$(@:.output.diff=.output) > $@ ; then echo "Test Passed"; rm -rf $@ ; else echo "Files differ; test falied"; cat $@; exit 1; fi
 
 gen-output: $(PASSING_C_CXX_ACC_TEST_OUTPUT)
 
