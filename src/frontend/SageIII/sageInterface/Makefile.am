@@ -22,13 +22,6 @@ libsageInterface_la_SOURCES      = \
 
 #     buildSetOfFrontendSpecificNodes.C
 
-if ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
-   libsageInterface_la_SOURCES += \
-     sageInterfaceAsm.C \
-     sageInterface_asm.C \
-     SageBuilderAsm.C
-endif
-
 libsageInterface_la_LIBADD       =
 libsageInterface_la_DEPENDENCIES =
 
@@ -42,13 +35,6 @@ pkginclude_HEADERS = \
      abiStuff.h
 #     highLevelInterface.h
 #     loopHelpers.h
-
-# if ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
-   pkginclude_HEADERS += \
-     sageInterfaceAsm.h \
-     SageBuilderAsm.h
-# endif
-
 
 #libsageInterface.la: $(libastFixup_la_OBJECTS) $(libastFixup_la_DEPENDENCIES)
 #	-rm -f $@

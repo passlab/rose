@@ -127,9 +127,6 @@ Grammar::Grammar ( const string& inputGrammarName,
      setUpExpressions();
      setUpSymbols();
 
-  // DQ (3/15/2007): Added support for binaries
-     setUpBinaryInstructions();
-
   // Setup of Node requires previous definition of types,
   // expressions, statements, symbols within the grammar
      setUpNodes();
@@ -1225,11 +1222,6 @@ generate_override_keyword( AstNodeClass & node, GrammarString & data )
           (nodeName == "TypedefDeclaration"         && variableNameString == "type")  ||
           (nodeName == "ClassDeclaration"           && variableNameString == "type")  ||
           (nodeName == "FunctionDeclaration"        && variableNameString == "type")  ||
-          (nodeName == "AsmExpression"              && variableNameString == "type")  ||
-          (nodeName == "AsmGenericSymbol"           && variableNameString == "type")  ||
-          (nodeName == "AsmElfSegmentTableEntry"    && variableNameString == "type")  ||
-          (nodeName == "AsmElfRelocEntry"           && variableNameString == "type")  ||
-          (nodeName == "AsmElfNoteEntry"            && variableNameString == "type")  ||
           (nodeName == "xxx"                        && variableNameString == "type")  ||
           (nodeName == "xxx"                        && variableNameString == "type")  ||
           (nodeName == "xxx"                        && variableNameString == "type")  ||
@@ -1277,17 +1269,7 @@ generate_override_keyword( AstNodeClass & node, GrammarString & data )
           (nodeName == "IOItemExpression"           && variableNameString == "name")  ||
           (nodeName == "AsmOp"                      && variableNameString == "name")  ||
           (nodeName == "UnknownArrayOrFunctionReference" && variableNameString == "name")  ||
-          (nodeName == "TypeTraitBuiltinOperator"   && variableNameString == "name")  ||
-          (nodeName == "AsmFunction"                && variableNameString == "name")  ||
-          (nodeName == "AsmSynthesizedFieldDeclaration" && variableNameString == "name")  ||
-          (nodeName == "AsmGenericFile"             && variableNameString == "name")  ||
-          (nodeName == "AsmElfSymverNeededAux"      && variableNameString == "name")  ||
-          (nodeName == "AsmPESectionTableEntry"     && variableNameString == "name")  ||
-          (nodeName == "AsmElfSymverDefinedAux"     && variableNameString == "name")  ||
-          (nodeName == "AsmPEExportDirectory"       && variableNameString == "name")  ||
-          (nodeName == "AsmDwarfConstruct"          && variableNameString == "name")  ||
-          (nodeName == "AsmPEImportItem"            && variableNameString == "name")  ||
-          (nodeName == "Aterm"                      && variableNameString == "name")  )
+          (nodeName == "TypeTraitBuiltinOperator"   && variableNameString == "name")   ) 
        {
          returnResult = false;
 #if 0
@@ -1352,13 +1334,8 @@ generate_override_keyword_for_set_functions( AstNodeClass & node, GrammarString 
           (nodeName == "FunctionDeclaration"        && variableNameString == "type")  ||
           (nodeName == "FunctionTypeSymbol"         && variableNameString == "type")  ||
           (nodeName == "DefaultSymbol"              && variableNameString == "type")  ||
-          (nodeName == "AsmExpression"              && variableNameString == "type")  ||
-          (nodeName == "AsmGenericSymbol"           && variableNameString == "type")  ||
-          (nodeName == "AsmElfSegmentTableEntry"    && variableNameString == "type")  ||
           (nodeName == "JavaTypeExpression"         && variableNameString == "type")  ||
           (nodeName == "TypeExpression"             && variableNameString == "type")  ||
-          (nodeName == "AsmElfRelocEntry"           && variableNameString == "type")  ||
-          (nodeName == "AsmElfNoteEntry"            && variableNameString == "type")  ||
           (nodeName == "xxx"                        && variableNameString == "type")  ||
           (nodeName == "xxx"                        && variableNameString == "type")  ||
           (nodeName == "xxx"                        && variableNameString == "type")  ||
@@ -1405,17 +1382,7 @@ generate_override_keyword_for_set_functions( AstNodeClass & node, GrammarString 
           (nodeName == "AsmOp"                      && variableNameString == "name")  ||
           (nodeName == "UnknownArrayOrFunctionReference" && variableNameString == "name")  ||
           (nodeName == "TypeTraitBuiltinOperator"   && variableNameString == "name")  ||
-          (nodeName == "FunctionTypeSymbol"         && variableNameString == "name")  ||
-          (nodeName == "AsmFunction"                && variableNameString == "name")  ||
-          (nodeName == "AsmSynthesizedFieldDeclaration" && variableNameString == "name")  ||
-          (nodeName == "AsmGenericFile"             && variableNameString == "name")  ||
-          (nodeName == "AsmElfSymverNeededAux"      && variableNameString == "name")  ||
-          (nodeName == "AsmPESectionTableEntry"     && variableNameString == "name")  ||
-          (nodeName == "AsmElfSymverDefinedAux"     && variableNameString == "name")  ||
-          (nodeName == "AsmPEExportDirectory"       && variableNameString == "name")  ||
-          (nodeName == "AsmDwarfConstruct"          && variableNameString == "name")  ||
-          (nodeName == "AsmPEImportItem"            && variableNameString == "name")  ||
-          (nodeName == "Aterm"                      && variableNameString == "name")  )
+          (nodeName == "FunctionTypeSymbol"         && variableNameString == "name")  )
        {
          returnResult = false;
 #if 0
@@ -1757,13 +1724,6 @@ Grammar::buildMemberAccessFunctionPrototypesAndConstuctorPrototype ( AstNodeClas
             // DQ (11/7/2006): Turn it back on as a constructor parameter (and reset the defaultInitializerString)
                returnValue->setIsInConstructorParameterList(CONSTRUCTOR_PARAMETER);
                returnValue->defaultInitializerString = defaultInitializer;
-#if 0
-            // DQ (10/7/2014): Adding support for Aterm specific function to build ROSE IR nodes (only generated where constructors are generated).
-               if (node.generateConstructor() == true)
-                  {
-                    constructorPrototype = constructorPrototype + "         static " + string(className) + "* build_node_from_nonlist_children(" + constructorParameterString_1 + "); \n";
-                  }
-#endif
              }
             else
              {
@@ -1771,13 +1731,6 @@ Grammar::buildMemberAccessFunctionPrototypesAndConstuctorPrototype ( AstNodeClas
                string constructorParameterString = buildConstructorParameterListString(node,withInitializers,withTypes, cur, &complete);
                constructorPrototype = constructorPrototype + "         " + string(className) + "(" + constructorParameterString + "); \n";
                withInitializers = false;
-#if 0
-            // DQ (10/7/2014): Adding support for Aterm specific function to build ROSE IR nodes (only generated where constructors are generated).
-               if (node.generateConstructor() == true)
-                  {
-                    constructorPrototype = constructorPrototype + "         static " + string(className) + "* build_node_from_nonlist_children(" + constructorParameterString + "); \n";
-                  }
-#endif
              }
 
           dataAccessFunctionPrototypeString.push_back(StringUtility::StringWithLineNumber(constructorPrototype, "" /* "<constructor>" */, 1));
@@ -1933,59 +1886,8 @@ Grammar::buildConstructor ( AstNodeClass & node )
              }
         }
 
-#if 0
-  // DQ (10/7/2014): Build the Aterm support static member function (constructor).
-  // if (node.generateConstructor() == true)
-        {
-          string constructorTemplateFileName = "../Grammar/grammarAtermConstructorDefinitionMacros.macro";
-          StringUtility::FileWithLineNumbers constructorSourceCodeTemplate = readFileWithPos (constructorTemplateFileName);
-
-          bool complete  = false;
-#if 0
-          ConstructParamEnum config = CONSTRUCTOR_PARAMETER;
-          if  (node.getBuildDefaultConstructor())
-             {
-               config = NO_CONSTRUCTOR_PARAMETER;
-             }
-
-          if (config == NO_CONSTRUCTOR_PARAMETER)
-             {
-              constructorLoopBody(NO_CONSTRUCTOR_PARAMETER, complete, constructorSourceCodeTemplate, node, returnString);
-             }
-            else
-             {
-               constructorLoopBody(CONSTRUCTOR_PARAMETER, complete, constructorSourceCodeTemplate, node, returnString);
-             }
-#else
-          constructorLoopBody(CONSTRUCTOR_PARAMETER, complete, constructorSourceCodeTemplate, node, returnString);
-#endif
-        }
-#endif
-
      return returnString;
    }
-
-
-StringUtility::FileWithLineNumbers
-Grammar::buildAtermConstructor ( AstNodeClass & node )
-   {
-  // DQ (10/10/2014): This function is only called to generate the skeleton for a
-  // small part of the API to translate Aterms to ROSE IR nodes.
-
-  // DQ (10/7/2014): Build the Aterm support static member function (constructor).
-
-     StringUtility::FileWithLineNumbers returnString;
-
-     string constructorTemplateFileName = "../Grammar/grammarAtermConstructorDefinitionMacros.macro";
-     StringUtility::FileWithLineNumbers constructorSourceCodeTemplate = readFileWithPos (constructorTemplateFileName);
-
-     bool complete  = false;
-     constructorLoopBody(CONSTRUCTOR_PARAMETER, complete, constructorSourceCodeTemplate, node, returnString);
-
-     return returnString;
-   }
-
-
 
 StringUtility::FileWithLineNumbers
 Grammar::buildCopyMemberFunctionSource ( AstNodeClass & node )
@@ -2561,44 +2463,6 @@ Grammar::buildSourceFiles( AstNodeClass & node, StringUtility::FileWithLineNumbe
         }
 #endif
    }
-
-
-void
-Grammar::buildAtermBuildFunctionsSourceFile( AstNodeClass & node, StringUtility::FileWithLineNumbers & outputFile )
-   {
-  // DQ (10/10/2014): This function is only called to generate the skeleton for a
-  // small part of the API to translate Aterms to ROSE IR nodes.
-
-     printf ("At TOP of Grammar::buildAtermBuildFunctionsSourceFile() \n");
-
-#if 0
-     printf ("Exiting at TOP of Grammar::buildAtermBuildFunctionsSourceFile() \n");
-     ROSE_ASSERT(false);
-#endif
-
-     StringUtility::FileWithLineNumbers editStringMiddleNodeDataMemberFunctions = buildAtermConstructor (node);
-
-#if 1
-  // Also output strings to single file
-     outputFile += editStringMiddleNodeDataMemberFunctions;
-#endif
-
-  // printf ("node.name = %s  (# of subtrees/leaves = %zu) \n",node.getName(),node.nodeList.size());
-
-#if 1
-  // Call this function recursively on the children of this node in the tree
-     vector<AstNodeClass *>::iterator treeNodeIterator;
-     for( treeNodeIterator = node.subclasses.begin(); treeNodeIterator != node.subclasses.end(); treeNodeIterator++ )
-        {
-          ROSE_ASSERT ((*treeNodeIterator) != NULL);
-          ROSE_ASSERT ((*treeNodeIterator)->getBaseClass() != NULL);
-
-          buildAtermBuildFunctionsSourceFile(**treeNodeIterator,outputFile);
-        }
-#endif
-   }
-
-
 
 void
 Grammar::printTreeNodeNames ( const AstNodeClass & node ) const
@@ -3391,14 +3255,6 @@ Grammar::buildCode ()
   // DQ (10/6/2006): Added output function for STL map objects
      ROSE_ArrayGrammarHeaderFile << "std::ostream& operator<<(std::ostream&, const std::map<SgNode*,std::string>&);\n\n";
 
-  // DQ (3/31/2007): Modified to be a list instead of a set (and added case for list of SgAsmExpression),
-  //                 though I am not certain these are even required to be specified.
-  // DQ (3/15/2007): Added output function for STL list objects
-  // ROSE_ArrayGrammarHeaderFile << "std::ostream& operator<<(std::ostream&, const std::set<SgAsmStatement*>&);\n\n";
-
-     ROSE_ArrayGrammarHeaderFile << "std::ostream& operator<<(std::ostream&, const Rose_STL_Container<SgAsmStatement*>&);\n\n";
-     ROSE_ArrayGrammarHeaderFile << "std::ostream& operator<<(std::ostream&, const Rose_STL_Container<SgAsmExpression*>&);\n\n";
-
   // DQ (11/20/2007): Part of support for the Fortran data statement
      ROSE_ArrayGrammarHeaderFile << "std::ostream& operator<<(std::ostream&, const Rose_STL_Container<SgDataStatementObject*>&);\n\n";
      ROSE_ArrayGrammarHeaderFile << "std::ostream& operator<<(std::ostream&, const Rose_STL_Container<SgDataStatementValue*>&);\n\n";
@@ -3803,28 +3659,6 @@ Grammar::buildCode ()
      if (verbose)
          cout << "DONE: buildTreeTraversalFunctions()" << endl;
      Grammar::writeFile(ROSE_treeTraversalFunctionsSourceFile, target_directory, getGrammarName() + "TreeTraversalSuccessorContainer", ".C");
-
-  // DQ (10/4/2014): Adding ATerm support via ROSETTA.
-  // ---------------------------------------------------------------------------------------------
-  // generate a function for each node in the AST to support ATerm read and write operations.
-  // ---------------------------------------------------------------------------------------------
-     StringUtility::FileWithLineNumbers ROSE_ATermSupportSourceFile;
-     if (verbose)
-         cout << "Calling buildAtermSupportFunctions() ..." << endl;
-  // Write header string to file (it's the same string as above, we just reuse it)
-     ROSE_ATermSupportSourceFile << includeHeaderString;
-
-  // DQ (10/4/2014): Insert "using namespace std;" into the source file (but never into the header files!)
-  // ROSE_ATermSupportSourceFile << "\n// Simplify code by using std namespace (never put into header files since it effects users) \nusing namespace std;\n\n";
-     ROSE_ATermSupportSourceFile << "\n// Simplify code by using AtermSupport namespace (never put into header files since it effects users) \nusing namespace AtermSupport;\n\n";
-
-#if 1
-  // Generate the implementations of the ATerm support functions
-     buildAtermSupportFunctions(*rootNode, ROSE_ATermSupportSourceFile);
-#endif
-     if (verbose)
-         cout << "DONE: buildAtermSupportFunctions()" << endl;
-     Grammar::writeFile(ROSE_ATermSupportSourceFile, target_directory, getGrammarName() + "AtermSupport", ".C");
 
 #if 0
      printf ("Exiting as a test in ROSETTA generation of ATerm support! \n");

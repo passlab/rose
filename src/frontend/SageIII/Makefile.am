@@ -91,7 +91,7 @@ CXX_TEMPLATE_REPOSITORY_PATH = .
 # This will hopefull avoid a linking problem where multiple files
 # are called preproc.o (from here and from EDG).
 EXTRA_DIST = CMakeLists.txt preproc-c.ll docs rtiHelpers.h attributeListMap.h \
-             advanced_preprocessing_hooks.h rose_attributes_list.h dwarfSupport.h atermSupport.h \
+             advanced_preprocessing_hooks.h rose_attributes_list.h \
              omplexer.cc ompparser.cc ompparser.h sage3basic.hhh fileoffsetbits.h rosedll.h \
 	     ompAstConstruction.h PolicyControl.txt Utf8.h
 CLEANFILES = haveRosettaGeneratedSource
@@ -124,7 +124,6 @@ else
 GENERATED_SOURCE = \
 	Cxx_Grammar.h \
 	Cxx_Grammar.C \
-	Cxx_GrammarAtermSupport.C \
 	Cxx_GrammarRTI.C \
 	Cxx_GrammarMemoryPoolSupport.C \
 	AstQueryMemoryPool.h \
@@ -190,9 +189,6 @@ libsage3Sources = \
    OmpAttribute.C \
    ompFortranParser.C \
    ompAstConstruction.cpp \
-   dwarfSupport.C \
-   atermSupport.C \
-   nodeBuildFunctionsForAterms.C \
    rose_graph_support.C \
    $(fSageSupport_la_sources)
 endif
@@ -324,7 +320,7 @@ pkginclude_HEADERS = \
    attach_all_info.h manglingSupport.h C++_include_files.h \
    fixupCopy.h \
    general_token_defs.h rtiHelpers.h \
-   OmpAttribute.h omp.h dwarfSupport.h atermSupport.h \
+   OmpAttribute.h omp.h \
    omp_lib_kinds.h omp_lib.h sage3basic.hhh rosedefs.h  fileoffsetbits.h rosedll.h \
    Cxx_GrammarSerialization.h \
    $(fSageSupport_includeHeaders)

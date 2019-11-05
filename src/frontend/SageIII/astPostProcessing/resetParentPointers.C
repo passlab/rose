@@ -1760,7 +1760,6 @@ ResetFileInfoParentPointersInMemoryPool::visit(SgNode* node)
 #endif
             // case V_SgFile:
                case V_SgSourceFile:
-               case V_SgBinaryComposite:
                case V_SgUnknownFile:
                   {
                     ROSE_ASSERT(support->get_file_info() != NULL);
@@ -1835,7 +1834,7 @@ resetParentPointersInMemoryPool(SgNode* node)
                globalScope = sourceFile->get_globalScope();
              }
 
-          ROSE_ASSERT(globalScope != NULL || isSgBinaryComposite(file) != NULL);
+          ROSE_ASSERT(globalScope != NULL );
         }
 
   // ROSE_ASSERT(globalScope != NULL);
