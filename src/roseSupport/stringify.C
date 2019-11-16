@@ -45402,102 +45402,6 @@ namespace Rose {
 }
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 48
-namespace stringify {
-    const char* E_SgJavaImportStatementList(long i) {
-        switch (i) {
-            case 0L: return "SgJavaImportStatementList_java_import_list";
-            default: return "";
-        }
-    }
-
-    std::string E_SgJavaImportStatementList(long i, const std::string &strip) {
-        std::string s = E_SgJavaImportStatementList(i);
-        if (s.empty())
-            s = "(E_SgJavaImportStatementList)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgJavaImportStatementList() {
-        static const long values[] = {
-            0L
-        };
-        static const std::vector<long> retval(values, values + 1);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaImportStatementList(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgJavaImportStatementList(i);
-        if (retval.empty()) {
-            retval = "(E_SgJavaImportStatementList)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgJavaImportStatementList::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgJavaImportStatementList() {
-        return stringify::E_SgJavaImportStatementList();
-    }
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 51
-namespace stringify {
-    const char* E_SgJavaClassDeclarationList(long i) {
-        switch (i) {
-            case 0L: return "SgJavaClassDeclarationList_java_class_list";
-            default: return "";
-        }
-    }
-
-    std::string E_SgJavaClassDeclarationList(long i, const std::string &strip) {
-        std::string s = E_SgJavaClassDeclarationList(i);
-        if (s.empty())
-            s = "(E_SgJavaClassDeclarationList)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgJavaClassDeclarationList() {
-        static const long values[] = {
-            0L
-        };
-        static const std::vector<long> retval(values, values + 1);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaClassDeclarationList(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgJavaClassDeclarationList(i);
-        if (retval.empty()) {
-            retval = "(E_SgJavaClassDeclarationList)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgJavaClassDeclarationList::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgJavaClassDeclarationList() {
-        return stringify::E_SgJavaClassDeclarationList();
-    }
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
 // /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 54
 namespace stringify {
     const char* E_SgTypeUnknown(long i) {
@@ -46996,58 +46900,6 @@ namespace Rose {
 }
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 144
-namespace stringify {
-    const char* E_SgJavaParameterType(long i) {
-        switch (i) {
-            case 0L: return "SgJavaParameterType_type_kind";
-            case 1L: return "SgJavaParameterType_builtin_type";
-            case 2L: return "SgJavaParameterType_declaration";
-            default: return "";
-        }
-    }
-
-    std::string E_SgJavaParameterType(long i, const std::string &strip) {
-        std::string s = E_SgJavaParameterType(i);
-        if (s.empty())
-            s = "(E_SgJavaParameterType)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgJavaParameterType() {
-        static const long values[] = {
-            0L,
-            1L,
-            2L
-        };
-        static const std::vector<long> retval(values, values + 3);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaParameterType(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgJavaParameterType(i);
-        if (retval.empty()) {
-            retval = "(E_SgJavaParameterType)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgJavaParameterType::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgJavaParameterType() {
-        return stringify::E_SgJavaParameterType();
-    }
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
 // /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 147
 namespace stringify {
     const char* E_SgClassType(long i) {
@@ -47252,162 +47104,6 @@ namespace Rose {
 
     const std::vector<long>& stringifyE_SgNonrealType() {
         return stringify::E_SgNonrealType();
-    }
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 159
-namespace stringify {
-    const char* E_SgJavaParameterizedType(long i) {
-        switch (i) {
-            case 0L: return "SgJavaParameterizedType_type_kind";
-            case 1L: return "SgJavaParameterizedType_builtin_type";
-            case 2L: return "SgJavaParameterizedType_declaration";
-            default: return "";
-        }
-    }
-
-    std::string E_SgJavaParameterizedType(long i, const std::string &strip) {
-        std::string s = E_SgJavaParameterizedType(i);
-        if (s.empty())
-            s = "(E_SgJavaParameterizedType)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgJavaParameterizedType() {
-        static const long values[] = {
-            0L,
-            1L,
-            2L
-        };
-        static const std::vector<long> retval(values, values + 3);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaParameterizedType(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgJavaParameterizedType(i);
-        if (retval.empty()) {
-            retval = "(E_SgJavaParameterizedType)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgJavaParameterizedType::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgJavaParameterizedType() {
-        return stringify::E_SgJavaParameterizedType();
-    }
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 162
-namespace stringify {
-    const char* E_SgJavaQualifiedType(long i) {
-        switch (i) {
-            case 0L: return "SgJavaQualifiedType_type_kind";
-            case 1L: return "SgJavaQualifiedType_builtin_type";
-            case 2L: return "SgJavaQualifiedType_declaration";
-            default: return "";
-        }
-    }
-
-    std::string E_SgJavaQualifiedType(long i, const std::string &strip) {
-        std::string s = E_SgJavaQualifiedType(i);
-        if (s.empty())
-            s = "(E_SgJavaQualifiedType)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgJavaQualifiedType() {
-        static const long values[] = {
-            0L,
-            1L,
-            2L
-        };
-        static const std::vector<long> retval(values, values + 3);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaQualifiedType(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgJavaQualifiedType(i);
-        if (retval.empty()) {
-            retval = "(E_SgJavaQualifiedType)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgJavaQualifiedType::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgJavaQualifiedType() {
-        return stringify::E_SgJavaQualifiedType();
-    }
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 165
-namespace stringify {
-    const char* E_SgJavaWildcardType(long i) {
-        switch (i) {
-            case 0L: return "SgJavaWildcardType_type_kind";
-            case 1L: return "SgJavaWildcardType_builtin_type";
-            case 2L: return "SgJavaWildcardType_declaration";
-            default: return "";
-        }
-    }
-
-    std::string E_SgJavaWildcardType(long i, const std::string &strip) {
-        std::string s = E_SgJavaWildcardType(i);
-        if (s.empty())
-            s = "(E_SgJavaWildcardType)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgJavaWildcardType() {
-        static const long values[] = {
-            0L,
-            1L,
-            2L
-        };
-        static const std::vector<long> retval(values, values + 3);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaWildcardType(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgJavaWildcardType(i);
-        if (retval.empty()) {
-            retval = "(E_SgJavaWildcardType)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgJavaWildcardType::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgJavaWildcardType() {
-        return stringify::E_SgJavaWildcardType();
     }
 }
 
@@ -48224,54 +47920,6 @@ namespace Rose {
 }
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 216
-namespace stringify {
-    const char* E_SgJavaUnionType(long i) {
-        switch (i) {
-            case 0L: return "SgJavaUnionType_type_kind";
-            default: return "";
-        }
-    }
-
-    std::string E_SgJavaUnionType(long i, const std::string &strip) {
-        std::string s = E_SgJavaUnionType(i);
-        if (s.empty())
-            s = "(E_SgJavaUnionType)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgJavaUnionType() {
-        static const long values[] = {
-            0L
-        };
-        static const std::vector<long> retval(values, values + 1);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaUnionType(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgJavaUnionType(i);
-        if (retval.empty()) {
-            retval = "(E_SgJavaUnionType)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgJavaUnionType::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgJavaUnionType() {
-        return stringify::E_SgJavaUnionType();
-    }
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
 // /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 219
 namespace stringify {
     const char* E_SgRvalueReferenceType(long i) {
@@ -48904,54 +48552,6 @@ namespace Rose {
 
     const std::vector<long>& stringifyE_SgInitializedName() {
         return stringify::E_SgInitializedName();
-    }
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 258
-namespace stringify {
-    const char* E_SgJavaMemberValuePair(long i) {
-        switch (i) {
-            case 0L: return "SgJavaMemberValuePair_value";
-            default: return "";
-        }
-    }
-
-    std::string E_SgJavaMemberValuePair(long i, const std::string &strip) {
-        std::string s = E_SgJavaMemberValuePair(i);
-        if (s.empty())
-            s = "(E_SgJavaMemberValuePair)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgJavaMemberValuePair() {
-        static const long values[] = {
-            0L
-        };
-        static const std::vector<long> retval(values, values + 1);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaMemberValuePair(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgJavaMemberValuePair(i);
-        if (retval.empty()) {
-            retval = "(E_SgJavaMemberValuePair)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgJavaMemberValuePair::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgJavaMemberValuePair() {
-        return stringify::E_SgJavaMemberValuePair();
     }
 }
 
@@ -53862,158 +53462,6 @@ namespace Rose {
 }
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 558
-namespace stringify {
-    const char* E_SgJavaForEachStatement(long i) {
-        switch (i) {
-            case 0L: return "SgJavaForEachStatement_element";
-            case 1L: return "SgJavaForEachStatement_collection";
-            case 2L: return "SgJavaForEachStatement_loop_body";
-            default: return "";
-        }
-    }
-
-    std::string E_SgJavaForEachStatement(long i, const std::string &strip) {
-        std::string s = E_SgJavaForEachStatement(i);
-        if (s.empty())
-            s = "(E_SgJavaForEachStatement)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgJavaForEachStatement() {
-        static const long values[] = {
-            0L,
-            1L,
-            2L
-        };
-        static const std::vector<long> retval(values, values + 3);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaForEachStatement(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgJavaForEachStatement(i);
-        if (retval.empty()) {
-            retval = "(E_SgJavaForEachStatement)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgJavaForEachStatement::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgJavaForEachStatement() {
-        return stringify::E_SgJavaForEachStatement();
-    }
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 561
-namespace stringify {
-    const char* E_SgJavaLabelStatement(long i) {
-        switch (i) {
-            case 0L: return "SgJavaLabelStatement_statement";
-            default: return "";
-        }
-    }
-
-    std::string E_SgJavaLabelStatement(long i, const std::string &strip) {
-        std::string s = E_SgJavaLabelStatement(i);
-        if (s.empty())
-            s = "(E_SgJavaLabelStatement)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgJavaLabelStatement() {
-        static const long values[] = {
-            0L
-        };
-        static const std::vector<long> retval(values, values + 1);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaLabelStatement(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgJavaLabelStatement(i);
-        if (retval.empty()) {
-            retval = "(E_SgJavaLabelStatement)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgJavaLabelStatement::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgJavaLabelStatement() {
-        return stringify::E_SgJavaLabelStatement();
-    }
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 564
-namespace stringify {
-    const char* E_SgMatlabForStatement(long i) {
-        switch (i) {
-            case 0L: return "SgMatlabForStatement_index";
-            case 1L: return "SgMatlabForStatement_range";
-            case 2L: return "SgMatlabForStatement_body";
-            default: return "";
-        }
-    }
-
-    std::string E_SgMatlabForStatement(long i, const std::string &strip) {
-        std::string s = E_SgMatlabForStatement(i);
-        if (s.empty())
-            s = "(E_SgMatlabForStatement)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgMatlabForStatement() {
-        static const long values[] = {
-            0L,
-            1L,
-            2L
-        };
-        static const std::vector<long> retval(values, values + 3);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgMatlabForStatement(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgMatlabForStatement(i);
-        if (retval.empty()) {
-            retval = "(E_SgMatlabForStatement)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgMatlabForStatement::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgMatlabForStatement() {
-        return stringify::E_SgMatlabForStatement();
-    }
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
 // /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 567
 namespace stringify {
     const char* E_SgRangeBasedForStatement(long i) {
@@ -55151,55 +54599,6 @@ namespace Rose {
     }
 }
 
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 636
-namespace stringify {
-    const char* E_SgJavaPackageDeclaration(long i) {
-        switch (i) {
-            case 0L: return "SgJavaPackageDeclaration_definition";
-            case 1L: return "SgJavaPackageDeclaration_decoratorList";
-            default: return "";
-        }
-    }
-
-    std::string E_SgJavaPackageDeclaration(long i, const std::string &strip) {
-        std::string s = E_SgJavaPackageDeclaration(i);
-        if (s.empty())
-            s = "(E_SgJavaPackageDeclaration)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgJavaPackageDeclaration() {
-        static const long values[] = {
-            0L,
-            1L
-        };
-        static const std::vector<long> retval(values, values + 2);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaPackageDeclaration(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgJavaPackageDeclaration(i);
-        if (retval.empty()) {
-            retval = "(E_SgJavaPackageDeclaration)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgJavaPackageDeclaration::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgJavaPackageDeclaration() {
-        return stringify::E_SgJavaPackageDeclaration();
-    }
-}
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
 // /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 639
@@ -59020,56 +58419,6 @@ namespace Rose {
 }
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 861
-namespace stringify {
-    const char* E_SgJavaSynchronizedStatement(long i) {
-        switch (i) {
-            case 0L: return "SgJavaSynchronizedStatement_expression";
-            case 1L: return "SgJavaSynchronizedStatement_body";
-            default: return "";
-        }
-    }
-
-    std::string E_SgJavaSynchronizedStatement(long i, const std::string &strip) {
-        std::string s = E_SgJavaSynchronizedStatement(i);
-        if (s.empty())
-            s = "(E_SgJavaSynchronizedStatement)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgJavaSynchronizedStatement() {
-        static const long values[] = {
-            0L,
-            1L
-        };
-        static const std::vector<long> retval(values, values + 2);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaSynchronizedStatement(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgJavaSynchronizedStatement(i);
-        if (retval.empty()) {
-            retval = "(E_SgJavaSynchronizedStatement)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgJavaSynchronizedStatement::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgJavaSynchronizedStatement() {
-        return stringify::E_SgJavaSynchronizedStatement();
-    }
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
 // /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 864
 namespace stringify {
     const char* E_SgAsyncStmt(long i) {
@@ -61902,56 +61251,6 @@ namespace Rose {
 }
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 1035
-namespace stringify {
-    const char* E_SgJavaUnsignedRshiftOp(long i) {
-        switch (i) {
-            case 0L: return "SgJavaUnsignedRshiftOp_lhs_operand_i";
-            case 1L: return "SgJavaUnsignedRshiftOp_rhs_operand_i";
-            default: return "";
-        }
-    }
-
-    std::string E_SgJavaUnsignedRshiftOp(long i, const std::string &strip) {
-        std::string s = E_SgJavaUnsignedRshiftOp(i);
-        if (s.empty())
-            s = "(E_SgJavaUnsignedRshiftOp)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgJavaUnsignedRshiftOp() {
-        static const long values[] = {
-            0L,
-            1L
-        };
-        static const std::vector<long> retval(values, values + 2);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaUnsignedRshiftOp(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgJavaUnsignedRshiftOp(i);
-        if (retval.empty()) {
-            retval = "(E_SgJavaUnsignedRshiftOp)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgJavaUnsignedRshiftOp::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgJavaUnsignedRshiftOp() {
-        return stringify::E_SgJavaUnsignedRshiftOp();
-    }
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
 // /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 1038
 namespace stringify {
     const char* E_SgConcatenationOp(long i) {
@@ -62602,56 +61901,6 @@ namespace Rose {
 }
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 1077
-namespace stringify {
-    const char* E_SgJavaUnsignedRshiftAssignOp(long i) {
-        switch (i) {
-            case 0L: return "SgJavaUnsignedRshiftAssignOp_lhs_operand_i";
-            case 1L: return "SgJavaUnsignedRshiftAssignOp_rhs_operand_i";
-            default: return "";
-        }
-    }
-
-    std::string E_SgJavaUnsignedRshiftAssignOp(long i, const std::string &strip) {
-        std::string s = E_SgJavaUnsignedRshiftAssignOp(i);
-        if (s.empty())
-            s = "(E_SgJavaUnsignedRshiftAssignOp)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgJavaUnsignedRshiftAssignOp() {
-        static const long values[] = {
-            0L,
-            1L
-        };
-        static const std::vector<long> retval(values, values + 2);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaUnsignedRshiftAssignOp(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgJavaUnsignedRshiftAssignOp(i);
-        if (retval.empty()) {
-            retval = "(E_SgJavaUnsignedRshiftAssignOp)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgJavaUnsignedRshiftAssignOp::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgJavaUnsignedRshiftAssignOp() {
-        return stringify::E_SgJavaUnsignedRshiftAssignOp();
-    }
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
 // /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 1080
 namespace stringify {
     const char* E_SgIntegerDivideAssignOp(long i) {
@@ -63003,53 +62252,6 @@ namespace Rose {
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
 // /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 1101
-namespace stringify {
-    const char* E_SgDotDotExp(long i) {
-        switch (i) {
-            case 0L: return "SgDotDotExp_lhs_operand_i";
-            case 1L: return "SgDotDotExp_rhs_operand_i";
-            default: return "";
-        }
-    }
-
-    std::string E_SgDotDotExp(long i, const std::string &strip) {
-        std::string s = E_SgDotDotExp(i);
-        if (s.empty())
-            s = "(E_SgDotDotExp)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgDotDotExp() {
-        static const long values[] = {
-            0L,
-            1L
-        };
-        static const std::vector<long> retval(values, values + 2);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgDotDotExp(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgDotDotExp(i);
-        if (retval.empty()) {
-            retval = "(E_SgDotDotExp)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgDotDotExp::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgDotDotExp() {
-        return stringify::E_SgDotDotExp();
-    }
-}
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
 // /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 1104
@@ -64134,54 +63336,6 @@ namespace Rose {
 
     const std::vector<long>& stringifyE_SgUpcElemsizeofExpression() {
         return stringify::E_SgUpcElemsizeofExpression();
-    }
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 1170
-namespace stringify {
-    const char* E_SgJavaInstanceOfOp(long i) {
-        switch (i) {
-            case 0L: return "SgJavaInstanceOfOp_operand_expr";
-            default: return "";
-        }
-    }
-
-    std::string E_SgJavaInstanceOfOp(long i, const std::string &strip) {
-        std::string s = E_SgJavaInstanceOfOp(i);
-        if (s.empty())
-            s = "(E_SgJavaInstanceOfOp)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgJavaInstanceOfOp() {
-        static const long values[] = {
-            0L
-        };
-        static const std::vector<long> retval(values, values + 1);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaInstanceOfOp(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgJavaInstanceOfOp(i);
-        if (retval.empty()) {
-            retval = "(E_SgJavaInstanceOfOp)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgJavaInstanceOfOp::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgJavaInstanceOfOp() {
-        return stringify::E_SgJavaInstanceOfOp();
     }
 }
 
@@ -66058,102 +65212,6 @@ namespace Rose {
 }
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 1287
-namespace stringify {
-    const char* E_SgJavaSingleMemberAnnotation(long i) {
-        switch (i) {
-            case 0L: return "SgJavaSingleMemberAnnotation_value";
-            default: return "";
-        }
-    }
-
-    std::string E_SgJavaSingleMemberAnnotation(long i, const std::string &strip) {
-        std::string s = E_SgJavaSingleMemberAnnotation(i);
-        if (s.empty())
-            s = "(E_SgJavaSingleMemberAnnotation)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgJavaSingleMemberAnnotation() {
-        static const long values[] = {
-            0L
-        };
-        static const std::vector<long> retval(values, values + 1);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaSingleMemberAnnotation(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgJavaSingleMemberAnnotation(i);
-        if (retval.empty()) {
-            retval = "(E_SgJavaSingleMemberAnnotation)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgJavaSingleMemberAnnotation::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgJavaSingleMemberAnnotation() {
-        return stringify::E_SgJavaSingleMemberAnnotation();
-    }
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 1290
-namespace stringify {
-    const char* E_SgJavaNormalAnnotation(long i) {
-        switch (i) {
-            case 0L: return "SgJavaNormalAnnotation_value_pair_list";
-            default: return "";
-        }
-    }
-
-    std::string E_SgJavaNormalAnnotation(long i, const std::string &strip) {
-        std::string s = E_SgJavaNormalAnnotation(i);
-        if (s.empty())
-            s = "(E_SgJavaNormalAnnotation)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgJavaNormalAnnotation() {
-        static const long values[] = {
-            0L
-        };
-        static const std::vector<long> retval(values, values + 1);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaNormalAnnotation(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgJavaNormalAnnotation(i);
-        if (retval.empty()) {
-            retval = "(E_SgJavaNormalAnnotation)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgJavaNormalAnnotation::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgJavaNormalAnnotation() {
-        return stringify::E_SgJavaNormalAnnotation();
-    }
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
 // /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 1293
 namespace stringify {
     const char* E_SgFunctionParameterRefExp(long i) {
@@ -66250,154 +65308,6 @@ namespace Rose {
 
     const std::vector<long>& stringifyE_SgLambdaExp() {
         return stringify::E_SgLambdaExp();
-    }
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 1299
-namespace stringify {
-    const char* E_SgHereExp(long i) {
-        switch (i) {
-            case 0L: return "SgHereExp_expression";
-            default: return "";
-        }
-    }
-
-    std::string E_SgHereExp(long i, const std::string &strip) {
-        std::string s = E_SgHereExp(i);
-        if (s.empty())
-            s = "(E_SgHereExp)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgHereExp() {
-        static const long values[] = {
-            0L
-        };
-        static const std::vector<long> retval(values, values + 1);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgHereExp(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgHereExp(i);
-        if (retval.empty()) {
-            retval = "(E_SgHereExp)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgHereExp::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgHereExp() {
-        return stringify::E_SgHereExp();
-    }
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 1302
-namespace stringify {
-    const char* E_SgAtExp(long i) {
-        switch (i) {
-            case 0L: return "SgAtExp_expression";
-            case 1L: return "SgAtExp_body";
-            default: return "";
-        }
-    }
-
-    std::string E_SgAtExp(long i, const std::string &strip) {
-        std::string s = E_SgAtExp(i);
-        if (s.empty())
-            s = "(E_SgAtExp)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgAtExp() {
-        static const long values[] = {
-            0L,
-            1L
-        };
-        static const std::vector<long> retval(values, values + 2);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgAtExp(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgAtExp(i);
-        if (retval.empty()) {
-            retval = "(E_SgAtExp)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgAtExp::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgAtExp() {
-        return stringify::E_SgAtExp();
-    }
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 1305
-namespace stringify {
-    const char* E_SgFinishExp(long i) {
-        switch (i) {
-            case 0L: return "SgFinishExp_expression";
-            case 1L: return "SgFinishExp_body";
-            default: return "";
-        }
-    }
-
-    std::string E_SgFinishExp(long i, const std::string &strip) {
-        std::string s = E_SgFinishExp(i);
-        if (s.empty())
-            s = "(E_SgFinishExp)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgFinishExp() {
-        static const long values[] = {
-            0L,
-            1L
-        };
-        static const std::vector<long> retval(values, values + 2);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgFinishExp(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgFinishExp(i);
-        if (retval.empty()) {
-            retval = "(E_SgFinishExp)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgFinishExp::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgFinishExp() {
-        return stringify::E_SgFinishExp();
     }
 }
 
@@ -67218,54 +66128,6 @@ namespace Rose {
 
     const std::vector<long>& stringifyE_SgAliasSymbol() {
         return stringify::E_SgAliasSymbol();
-    }
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 1359
-namespace stringify {
-    const char* E_SgJavaLabelSymbol(long i) {
-        switch (i) {
-            case 0L: return "SgJavaLabelSymbol_declaration";
-            default: return "";
-        }
-    }
-
-    std::string E_SgJavaLabelSymbol(long i, const std::string &strip) {
-        std::string s = E_SgJavaLabelSymbol(i);
-        if (s.empty())
-            s = "(E_SgJavaLabelSymbol)" + boost::lexical_cast<std::string>(i);
-        if (boost::starts_with(s, strip))
-            s = s.substr(strip.size());
-        return s;
-    }
-
-    const std::vector<long>& E_SgJavaLabelSymbol() {
-        static const long values[] = {
-            0L
-        };
-        static const std::vector<long> retval(values, values + 1);
-        return retval;
-    }
-
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaLabelSymbol(long int i, const char *strip, bool canonic) {
-        std::string retval = stringify::E_SgJavaLabelSymbol(i);
-        if (retval.empty()) {
-            retval = "(E_SgJavaLabelSymbol)" + boost::lexical_cast<std::string>(i);
-        } else {
-            if (strip && !strncmp(strip, retval.c_str(), strlen(strip)))
-                retval = retval.substr(strlen(strip));
-            if (canonic)
-                retval = "E_SgJavaLabelSymbol::" + retval;
-        }
-        return retval;
-    }
-
-    const std::vector<long>& stringifyE_SgJavaLabelSymbol() {
-        return stringify::E_SgJavaLabelSymbol();
     }
 }
 
@@ -73923,12 +72785,6 @@ namespace stringify {
             case 885L: return "COARRAY_REF_EXPR";
             case 886L: return "CALL_EXPRESSION";
             case 887L: return "T_CRAY_POINTER";
-            case 888L: return "TEMP_JavaImportStatement";
-            case 889L: return "TEMP_JavaPackageDeclaration";
-            case 890L: return "TEMP_JavaPackageStatement";
-            case 891L: return "JavaImportStatementListTag";
-            case 892L: return "JavaClassDeclarationListTag";
-            case 893L: return "JavaMemberValuePairTag";
             case 894L: return "JAVA_ANNOTATION";
             case 895L: return "JAVA_MARKER_ANNOTATION";
             case 896L: return "JAVA_SINGLE_MEMBER_ANNOTATION";
@@ -75350,9 +74206,7 @@ namespace stringify {
             case 447L: return "V_SgCudaKernelCallExp";
             case 448L: return "V_SgLabelRefExp";
             case 449L: return "V_SgLabelStatement";
-            case 450L: return "V_SgJavaLabelStatement";
             case 451L: return "V_SgLabelSymbol";
-            case 452L: return "V_SgJavaLabelSymbol";
             case 453L: return "V_SgLambdaCapture";
             case 454L: return "V_SgLambdaCaptureList";
             case 455L: return "V_SgLambdaExp";
@@ -75521,8 +74375,6 @@ namespace stringify {
             case 618L: return "V_SgRshiftAssignOp";
             case 619L: return "V_SgRshiftOp";
             case 620L: return "V_SgRvalueReferenceType";
-            case 621L: return "V_SgJavaUnsignedRshiftAssignOp";
-            case 622L: return "V_SgJavaUnsignedRshiftOp";
             case 623L: return "V_SgScopeOp";
             case 624L: return "V_SgScopeStatement";
             case 625L: return "V_SgSequenceStatement";
@@ -75530,7 +74382,6 @@ namespace stringify {
             case 627L: return "V_SgShortVal";
             case 628L: return "V_SgSizeOfOp";
             case 629L: return "V_SgAlignOfOp";
-            case 630L: return "V_SgJavaInstanceOfOp";
             case 631L: return "V_SgSourceFile";
             case 632L: return "V_SgSpawnStmt";
             case 633L: return "V_SgSyncAllStatement";
@@ -75539,11 +74390,6 @@ namespace stringify {
             case 636L: return "V_SgSyncTeamStatement";
             case 637L: return "V_SgLockStatement";
             case 638L: return "V_SgUnlockStatement";
-            case 639L: return "V_SgJavaThrowStatement";
-            case 640L: return "V_SgJavaForEachStatement";
-            case 641L: return "V_SgJavaSynchronizedStatement";
-            case 642L: return "V_SgJavaParameterizedType";
-            case 643L: return "V_SgJavaWildcardType";
             case 644L: return "V_SgSpecialFunctionModifier";
             case 645L: return "V_SgStatement";
             case 646L: return "V_SgStaticAssertionDeclaration";
@@ -75787,30 +74633,7 @@ namespace stringify {
             case 885L: return "V_SgCAFCoExpression";
             case 886L: return "V_SgCallExpression";
             case 887L: return "V_SgTypeCrayPointer";
-            case 888L: return "V_SgJavaImportStatement";
-            case 889L: return "V_SgJavaPackageDeclaration";
-            case 890L: return "V_SgJavaPackageStatement";
-            case 891L: return "V_SgJavaImportStatementList";
-            case 892L: return "V_SgJavaClassDeclarationList";
-            case 893L: return "V_SgJavaMemberValuePair";
-            case 894L: return "V_SgJavaAnnotation";
-            case 895L: return "V_SgJavaMarkerAnnotation";
-            case 896L: return "V_SgJavaSingleMemberAnnotation";
-            case 897L: return "V_SgJavaNormalAnnotation";
-            case 898L: return "V_SgJavaTypeExpression";
-            case 899L: return "V_SgJavaQualifiedType";
             case 900L: return "V_SgClassExp";
-            case 901L: return "V_SgJavaUnionType";
-            case 902L: return "V_SgJavaParameterType";
-            case 903L: return "V_SgAsyncStmt";
-            case 904L: return "V_SgFinishStmt";
-            case 905L: return "V_SgAtStmt";
-            case 906L: return "V_SgAtomicStmt";
-            case 908L: return "V_SgWhenStmt";
-            case 909L: return "V_SgAtExp";
-            case 910L: return "V_SgFinishExp";
-            case 911L: return "V_SgHereExp";
-            case 912L: return "V_SgDotDotExp";
             case 914L: return "V_SgNumVariants";
             default: return "";
         }
@@ -78086,17 +76909,7 @@ namespace stringify { namespace SgFile {
             case 1L: return "e_default_language";
             case 2L: return "e_C_language";
             case 3L: return "e_Cxx_language";
-            case 4L: return "e_Binary_language";
             case 5L: return "e_Fortran_language";
-            case 6L: return "e_Java_language";
-            case 7L: return "e_X10_language";
-            case 8L: return "e_Promela_language";
-            case 9L: return "e_PHP_language";
-            case 10L: return "e_Python_language";
-            case 11L: return "e_Csharp_language";
-            case 12L: return "e_Ada_language";
-            case 13L: return "e_Jovial_language";
-            case 14L: return "e_Cobol_language";
             case 15L: return "e_last_language";
             default: return "";
         }

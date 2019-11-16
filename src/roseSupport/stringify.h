@@ -9352,42 +9352,6 @@ namespace Rose {
 }
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 48
-namespace stringify {
-    /** Convert E_SgJavaImportStatementList enum constant to a string. */
-    const char* E_SgJavaImportStatementList(long);
-
-    /** Convert E_SgJavaImportStatementList enum constant to a string. */
-    std::string E_SgJavaImportStatementList(long, const std::string &strip);
-
-    /** Return all E_SgJavaImportStatementList member values as a vector. */
-    const std::vector<long>& E_SgJavaImportStatementList();
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaImportStatementList(long int n, const char *strip=NULL, bool canonic=false);
-    const std::vector<long>& stringifyE_SgJavaImportStatementList();
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 51
-namespace stringify {
-    /** Convert E_SgJavaClassDeclarationList enum constant to a string. */
-    const char* E_SgJavaClassDeclarationList(long);
-
-    /** Convert E_SgJavaClassDeclarationList enum constant to a string. */
-    std::string E_SgJavaClassDeclarationList(long, const std::string &strip);
-
-    /** Return all E_SgJavaClassDeclarationList member values as a vector. */
-    const std::vector<long>& E_SgJavaClassDeclarationList();
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaClassDeclarationList(long int n, const char *strip=NULL, bool canonic=false);
-    const std::vector<long>& stringifyE_SgJavaClassDeclarationList();
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
 // /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 54
 namespace stringify {
     /** Convert E_SgTypeUnknown enum constant to a string. */
@@ -9928,24 +9892,6 @@ namespace Rose {
 }
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 144
-namespace stringify {
-    /** Convert E_SgJavaParameterType enum constant to a string. */
-    const char* E_SgJavaParameterType(long);
-
-    /** Convert E_SgJavaParameterType enum constant to a string. */
-    std::string E_SgJavaParameterType(long, const std::string &strip);
-
-    /** Return all E_SgJavaParameterType member values as a vector. */
-    const std::vector<long>& E_SgJavaParameterType();
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaParameterType(long int n, const char *strip=NULL, bool canonic=false);
-    const std::vector<long>& stringifyE_SgJavaParameterType();
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
 // /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 147
 namespace stringify {
     /** Convert E_SgClassType enum constant to a string. */
@@ -10015,60 +9961,6 @@ namespace stringify {
 namespace Rose {
     std::string stringifyE_SgNonrealType(long int n, const char *strip=NULL, bool canonic=false);
     const std::vector<long>& stringifyE_SgNonrealType();
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 159
-namespace stringify {
-    /** Convert E_SgJavaParameterizedType enum constant to a string. */
-    const char* E_SgJavaParameterizedType(long);
-
-    /** Convert E_SgJavaParameterizedType enum constant to a string. */
-    std::string E_SgJavaParameterizedType(long, const std::string &strip);
-
-    /** Return all E_SgJavaParameterizedType member values as a vector. */
-    const std::vector<long>& E_SgJavaParameterizedType();
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaParameterizedType(long int n, const char *strip=NULL, bool canonic=false);
-    const std::vector<long>& stringifyE_SgJavaParameterizedType();
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 162
-namespace stringify {
-    /** Convert E_SgJavaQualifiedType enum constant to a string. */
-    const char* E_SgJavaQualifiedType(long);
-
-    /** Convert E_SgJavaQualifiedType enum constant to a string. */
-    std::string E_SgJavaQualifiedType(long, const std::string &strip);
-
-    /** Return all E_SgJavaQualifiedType member values as a vector. */
-    const std::vector<long>& E_SgJavaQualifiedType();
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaQualifiedType(long int n, const char *strip=NULL, bool canonic=false);
-    const std::vector<long>& stringifyE_SgJavaQualifiedType();
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 165
-namespace stringify {
-    /** Convert E_SgJavaWildcardType enum constant to a string. */
-    const char* E_SgJavaWildcardType(long);
-
-    /** Convert E_SgJavaWildcardType enum constant to a string. */
-    std::string E_SgJavaWildcardType(long, const std::string &strip);
-
-    /** Return all E_SgJavaWildcardType member values as a vector. */
-    const std::vector<long>& E_SgJavaWildcardType();
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaWildcardType(long int n, const char *strip=NULL, bool canonic=false);
-    const std::vector<long>& stringifyE_SgJavaWildcardType();
 }
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
@@ -10360,24 +10252,6 @@ namespace Rose {
 }
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 216
-namespace stringify {
-    /** Convert E_SgJavaUnionType enum constant to a string. */
-    const char* E_SgJavaUnionType(long);
-
-    /** Convert E_SgJavaUnionType enum constant to a string. */
-    std::string E_SgJavaUnionType(long, const std::string &strip);
-
-    /** Return all E_SgJavaUnionType member values as a vector. */
-    const std::vector<long>& E_SgJavaUnionType();
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaUnionType(long int n, const char *strip=NULL, bool canonic=false);
-    const std::vector<long>& stringifyE_SgJavaUnionType();
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
 // /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 219
 namespace stringify {
     /** Convert E_SgRvalueReferenceType enum constant to a string. */
@@ -10609,24 +10483,6 @@ namespace stringify {
 namespace Rose {
     std::string stringifyE_SgInitializedName(long int n, const char *strip=NULL, bool canonic=false);
     const std::vector<long>& stringifyE_SgInitializedName();
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 258
-namespace stringify {
-    /** Convert E_SgJavaMemberValuePair enum constant to a string. */
-    const char* E_SgJavaMemberValuePair(long);
-
-    /** Convert E_SgJavaMemberValuePair enum constant to a string. */
-    std::string E_SgJavaMemberValuePair(long, const std::string &strip);
-
-    /** Return all E_SgJavaMemberValuePair member values as a vector. */
-    const std::vector<long>& E_SgJavaMemberValuePair();
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaMemberValuePair(long int n, const char *strip=NULL, bool canonic=false);
-    const std::vector<long>& stringifyE_SgJavaMemberValuePair();
 }
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
@@ -12412,60 +12268,6 @@ namespace Rose {
 }
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 558
-namespace stringify {
-    /** Convert E_SgJavaForEachStatement enum constant to a string. */
-    const char* E_SgJavaForEachStatement(long);
-
-    /** Convert E_SgJavaForEachStatement enum constant to a string. */
-    std::string E_SgJavaForEachStatement(long, const std::string &strip);
-
-    /** Return all E_SgJavaForEachStatement member values as a vector. */
-    const std::vector<long>& E_SgJavaForEachStatement();
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaForEachStatement(long int n, const char *strip=NULL, bool canonic=false);
-    const std::vector<long>& stringifyE_SgJavaForEachStatement();
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 561
-namespace stringify {
-    /** Convert E_SgJavaLabelStatement enum constant to a string. */
-    const char* E_SgJavaLabelStatement(long);
-
-    /** Convert E_SgJavaLabelStatement enum constant to a string. */
-    std::string E_SgJavaLabelStatement(long, const std::string &strip);
-
-    /** Return all E_SgJavaLabelStatement member values as a vector. */
-    const std::vector<long>& E_SgJavaLabelStatement();
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaLabelStatement(long int n, const char *strip=NULL, bool canonic=false);
-    const std::vector<long>& stringifyE_SgJavaLabelStatement();
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 564
-namespace stringify {
-    /** Convert E_SgMatlabForStatement enum constant to a string. */
-    const char* E_SgMatlabForStatement(long);
-
-    /** Convert E_SgMatlabForStatement enum constant to a string. */
-    std::string E_SgMatlabForStatement(long, const std::string &strip);
-
-    /** Return all E_SgMatlabForStatement member values as a vector. */
-    const std::vector<long>& E_SgMatlabForStatement();
-}
-
-namespace Rose {
-    std::string stringifyE_SgMatlabForStatement(long int n, const char *strip=NULL, bool canonic=false);
-    const std::vector<long>& stringifyE_SgMatlabForStatement();
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
 // /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 567
 namespace stringify {
     /** Convert E_SgRangeBasedForStatement enum constant to a string. */
@@ -12877,24 +12679,6 @@ namespace stringify {
 namespace Rose {
     std::string stringifyE_SgModuleStatement(long int n, const char *strip=NULL, bool canonic=false);
     const std::vector<long>& stringifyE_SgModuleStatement();
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 636
-namespace stringify {
-    /** Convert E_SgJavaPackageDeclaration enum constant to a string. */
-    const char* E_SgJavaPackageDeclaration(long);
-
-    /** Convert E_SgJavaPackageDeclaration enum constant to a string. */
-    std::string E_SgJavaPackageDeclaration(long, const std::string &strip);
-
-    /** Return all E_SgJavaPackageDeclaration member values as a vector. */
-    const std::vector<long>& E_SgJavaPackageDeclaration();
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaPackageDeclaration(long int n, const char *strip=NULL, bool canonic=false);
-    const std::vector<long>& stringifyE_SgJavaPackageDeclaration();
 }
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
@@ -14230,24 +14014,6 @@ namespace Rose {
 }
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 861
-namespace stringify {
-    /** Convert E_SgJavaSynchronizedStatement enum constant to a string. */
-    const char* E_SgJavaSynchronizedStatement(long);
-
-    /** Convert E_SgJavaSynchronizedStatement enum constant to a string. */
-    std::string E_SgJavaSynchronizedStatement(long, const std::string &strip);
-
-    /** Return all E_SgJavaSynchronizedStatement member values as a vector. */
-    const std::vector<long>& E_SgJavaSynchronizedStatement();
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaSynchronizedStatement(long int n, const char *strip=NULL, bool canonic=false);
-    const std::vector<long>& stringifyE_SgJavaSynchronizedStatement();
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
 // /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 864
 namespace stringify {
     /** Convert E_SgAsyncStmt enum constant to a string. */
@@ -15274,24 +15040,6 @@ namespace Rose {
 }
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 1035
-namespace stringify {
-    /** Convert E_SgJavaUnsignedRshiftOp enum constant to a string. */
-    const char* E_SgJavaUnsignedRshiftOp(long);
-
-    /** Convert E_SgJavaUnsignedRshiftOp enum constant to a string. */
-    std::string E_SgJavaUnsignedRshiftOp(long, const std::string &strip);
-
-    /** Return all E_SgJavaUnsignedRshiftOp member values as a vector. */
-    const std::vector<long>& E_SgJavaUnsignedRshiftOp();
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaUnsignedRshiftOp(long int n, const char *strip=NULL, bool canonic=false);
-    const std::vector<long>& stringifyE_SgJavaUnsignedRshiftOp();
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
 // /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 1038
 namespace stringify {
     /** Convert E_SgConcatenationOp enum constant to a string. */
@@ -15523,24 +15271,6 @@ namespace stringify {
 namespace Rose {
     std::string stringifyE_SgRshiftAssignOp(long int n, const char *strip=NULL, bool canonic=false);
     const std::vector<long>& stringifyE_SgRshiftAssignOp();
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 1077
-namespace stringify {
-    /** Convert E_SgJavaUnsignedRshiftAssignOp enum constant to a string. */
-    const char* E_SgJavaUnsignedRshiftAssignOp(long);
-
-    /** Convert E_SgJavaUnsignedRshiftAssignOp enum constant to a string. */
-    std::string E_SgJavaUnsignedRshiftAssignOp(long, const std::string &strip);
-
-    /** Return all E_SgJavaUnsignedRshiftAssignOp member values as a vector. */
-    const std::vector<long>& E_SgJavaUnsignedRshiftAssignOp();
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaUnsignedRshiftAssignOp(long int n, const char *strip=NULL, bool canonic=false);
-    const std::vector<long>& stringifyE_SgJavaUnsignedRshiftAssignOp();
 }
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
@@ -16081,24 +15811,6 @@ namespace stringify {
 namespace Rose {
     std::string stringifyE_SgUpcElemsizeofExpression(long int n, const char *strip=NULL, bool canonic=false);
     const std::vector<long>& stringifyE_SgUpcElemsizeofExpression();
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 1170
-namespace stringify {
-    /** Convert E_SgJavaInstanceOfOp enum constant to a string. */
-    const char* E_SgJavaInstanceOfOp(long);
-
-    /** Convert E_SgJavaInstanceOfOp enum constant to a string. */
-    std::string E_SgJavaInstanceOfOp(long, const std::string &strip);
-
-    /** Return all E_SgJavaInstanceOfOp member values as a vector. */
-    const std::vector<long>& E_SgJavaInstanceOfOp();
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaInstanceOfOp(long int n, const char *strip=NULL, bool canonic=false);
-    const std::vector<long>& stringifyE_SgJavaInstanceOfOp();
 }
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
@@ -16786,42 +16498,6 @@ namespace Rose {
 }
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 1287
-namespace stringify {
-    /** Convert E_SgJavaSingleMemberAnnotation enum constant to a string. */
-    const char* E_SgJavaSingleMemberAnnotation(long);
-
-    /** Convert E_SgJavaSingleMemberAnnotation enum constant to a string. */
-    std::string E_SgJavaSingleMemberAnnotation(long, const std::string &strip);
-
-    /** Return all E_SgJavaSingleMemberAnnotation member values as a vector. */
-    const std::vector<long>& E_SgJavaSingleMemberAnnotation();
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaSingleMemberAnnotation(long int n, const char *strip=NULL, bool canonic=false);
-    const std::vector<long>& stringifyE_SgJavaSingleMemberAnnotation();
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 1290
-namespace stringify {
-    /** Convert E_SgJavaNormalAnnotation enum constant to a string. */
-    const char* E_SgJavaNormalAnnotation(long);
-
-    /** Convert E_SgJavaNormalAnnotation enum constant to a string. */
-    std::string E_SgJavaNormalAnnotation(long, const std::string &strip);
-
-    /** Return all E_SgJavaNormalAnnotation member values as a vector. */
-    const std::vector<long>& E_SgJavaNormalAnnotation();
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaNormalAnnotation(long int n, const char *strip=NULL, bool canonic=false);
-    const std::vector<long>& stringifyE_SgJavaNormalAnnotation();
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
 // /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 1293
 namespace stringify {
     /** Convert E_SgFunctionParameterRefExp enum constant to a string. */
@@ -17215,24 +16891,6 @@ namespace stringify {
 namespace Rose {
     std::string stringifyE_SgAliasSymbol(long int n, const char *strip=NULL, bool canonic=false);
     const std::vector<long>& stringifyE_SgAliasSymbol();
-}
-
-// DO NOT EDIT -- This implementation was automatically generated for the enum defined at
-// /rose/rose_build/src/frontend/SageIII/Cxx_GrammarTreeTraversalAccessEnums.h line 1359
-namespace stringify {
-    /** Convert E_SgJavaLabelSymbol enum constant to a string. */
-    const char* E_SgJavaLabelSymbol(long);
-
-    /** Convert E_SgJavaLabelSymbol enum constant to a string. */
-    std::string E_SgJavaLabelSymbol(long, const std::string &strip);
-
-    /** Return all E_SgJavaLabelSymbol member values as a vector. */
-    const std::vector<long>& E_SgJavaLabelSymbol();
-}
-
-namespace Rose {
-    std::string stringifyE_SgJavaLabelSymbol(long int n, const char *strip=NULL, bool canonic=false);
-    const std::vector<long>& stringifyE_SgJavaLabelSymbol();
 }
 
 // DO NOT EDIT -- This implementation was automatically generated for the enum defined at

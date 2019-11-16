@@ -18,12 +18,6 @@
 
 // Headers required only to obtain version numbers
 #include <boost/version.hpp>
-#ifdef ROSE_HAVE_LIBREADLINE
-#   include <readline/readline.h>
-#endif
-#ifdef ROSE_HAVE_LIBMAGIC
-#   include <magic.h>
-#endif
 #ifdef ROSE_HAVE_LIBYICES
 #   include <yices_c.h>
 #endif
@@ -233,37 +227,6 @@ std::string ofpVersionString()
    }
 
 static std::string
-readlineVersionString() {
-#ifdef ROSE_HAVE_LIBREADLINE
-    return StringUtility::numberToString(RL_VERSION_MAJOR) + "." + StringUtility::numberToString(RL_VERSION_MINOR);
-#else
-    return "unknown (readline is disabled)";
-#endif
-}
-
-static std::string
-libmagicVersionString() {
-#ifdef ROSE_HAVE_LIBMAGIC
-#ifdef MAGIC_VERSION
-    return StringUtility::numberToString(MAGIC_VERSION);
-#else
-    return "unknown (but enabled)";
-#endif
-#else
-    return "unknown (libmagic is disabled)";
-#endif
-}
-
-static std::string
-yamlcppVersionString() {
-#ifdef ROSE_HAVE_LIBYAML
-    return "unknown (but enabled)";                     // not sure how to get a version number for this library
-#else
-    return "unknown (yaml-cpp is disabled)";
-#endif
-}
-
-static std::string
 yicesVersionString() {
 #ifdef ROSE_HAVE_LIBYICES
     if (const char *s = yices_version())
@@ -344,9 +307,6 @@ std::string version_message()
           "\n  --- using backend C++ compiler path (as specified at configure time): " + backend_Cxx_compiler_with_path +
           "\n  --- using original build tree path: " + build_tree_path +
           "\n  --- using instalation path: " + install_path +
-          "\n  --- using GNU readline version: " + readlineVersionString() +
-          "\n  --- using libmagic version: " + libmagicVersionString() +
-          "\n  --- using yaml-cpp version: " + yamlcppVersionString() +
           "\n  --- using lib-yices version: " + yicesVersionString();
   }
 
@@ -650,23 +610,6 @@ backend ( SgProject* project, UnparseFormatHelp *unparseFormatHelp, UnparseDeleg
   // signal(SIG_DFL,NULL);
      signal(SIGABRT,SIG_DFL);
 #endif
-
-#if 0
-  // DQ (9/8/2017): Debugging ROSE_ASSERT.
-     printf ("Exiting as a test! \n");
-     ROSE_ASSERT(false);
-#endif
-
-     if (project->get_binary_only() == true)
-        {
-          ROSE_ASSERT(project != NULL);
-
-       // DQ (8/21/2008): Only output a message when we we use verbose option.
-          if ( SgProject::get_verbose() >= 1 )
-               printf ("Note: Binary executables are unparsed, but not passed to gcc as assembly source code \n");
-
-          project->skipfinalCompileStep(true);
-        }
 
   // printf ("   project->get_useBackendOnly() = %s \n",project->get_useBackendOnly() ? "true" : "false");
      if (project->get_useBackendOnly() == false)
@@ -1860,10 +1803,3 @@ Rose::getPreviousStatement ( SgStatement *targetStatement , bool climbOutScope /
 
      return previousStatement;
    }
-
-
-
-
-
-
-

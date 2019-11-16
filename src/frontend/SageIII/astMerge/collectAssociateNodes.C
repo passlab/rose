@@ -270,60 +270,6 @@ addAssociatedNodes( SgType* type, set<SgNode*> & nodeList, bool markMemberNodesD
             break;
           }
           
-       // DQ (9/5/2011): Added support for SgJavaParameterizedType.
-          case V_SgJavaParameterizedType:
-             {
-               SgJavaParameterizedType* javaParameterizedType = isSgJavaParameterizedType(type);
-               ROSE_ASSERT(javaParameterizedType != NULL);
-               if (javaParameterizedType->get_raw_type() != NULL)
-                  {
-                    nodeList.insert(javaParameterizedType->get_raw_type());
-                    addAssociatedNodes(javaParameterizedType->get_raw_type(),nodeList,markMemberNodesDefinedToBeDeleted);
-                  }
-               ROSE_ASSERT(nodeList.find(NULL) == nodeList.end());
-
-               if (javaParameterizedType->get_type_list() != NULL)
-                  {
-                    SgTemplateParameterList* type_list = javaParameterizedType->get_type_list();
-                    for (size_t i = 0; i < type_list->get_args().size(); i++)
-                       {
-                         SgType* argumentType = NULL;
-                         SgTemplateParameter* templateParameter = type_list->get_args()[i];
-                         ROSE_ASSERT(templateParameter != NULL);
-                         if (templateParameter->get_parameterType() == SgTemplateParameter::type_parameter)
-                            {
-                              if (templateParameter->get_type() != NULL)
-                                 {
-                                   argumentType = templateParameter->get_type();
-                                 }
-                                else
-                                 {
-                                // Do we need to support the default type when the type is not explicit.
-                                 }
-                            }
-                           else
-                            {
-                           // This was not a type parameter (but it might be a template declaration or something work paying attention to).
-                            }
-
-                      // There are a number of way in which the argumentType can be set (but maybe a restricted set of ways for Java).
-                         if (argumentType != NULL)
-                            {
-                              nodeList.insert(argumentType);
-                              addAssociatedNodes(argumentType,nodeList,markMemberNodesDefinedToBeDeleted);
-                            }
-                           else
-                            {
-                           // It might be that this branch should be an error for Java. But likely caught elsewhere in ROSE.
-                            }
-                       }
-                  }
-
-               ROSE_ASSERT(nodeList.find(NULL) == nodeList.end());
-
-               break;
-             }
-
           case V_SgQualifiedNameType:
        // case V_SgTemplateType:
 #ifndef ROSE_USE_NEW_EDG_INTERFACE 
@@ -365,7 +311,6 @@ addAssociatedNodes( SgType* type, set<SgNode*> & nodeList, bool markMemberNodesD
           case V_SgRvalueReferenceType:
 
        // These are primative types
-          case V_SgJavaWildcardType:
           case V_SgTypeBool:
           case V_SgTypeChar:
           case V_SgTypeComplex:
@@ -524,11 +469,6 @@ addAssociatedNodes ( SgNode* node, set<SgNode*> & nodeList, bool markMemberNodes
      ROSE_ASSERT(finalDeleteSet.find(node) == finalDeleteSet.end());
 
      if (isSgExpression(node) != NULL)
-        {
-          return;
-        }
-
-     if (isSgJavaMemberValuePair(node) != NULL)
         {
           return;
         }
@@ -1282,7 +1222,6 @@ addAssociatedNodes ( SgNode* node, set<SgNode*> & nodeList, bool markMemberNodes
        // DQ (9/1/2012): The template class declaration is derived from the SgClassDeclaration.
           case V_SgTemplateClassDeclaration:
 
-          case V_SgJavaPackageDeclaration:
           case V_SgClassDeclaration:
           case V_SgDerivedTypeStatement:
        // DQ (2/10/2007): Added case for SgTemplateInstantiationDecl
@@ -2110,10 +2049,6 @@ addAssociatedNodes ( SgNode* node, set<SgNode*> & nodeList, bool markMemberNodes
           case V_SgLambdaCapture:
           case V_SgLambdaCaptureList:
 
-       // DQ (4/16/2011): Added support for another IR node.
-          case V_SgJavaImportStatement:
-          case V_SgJavaPackageStatement:
-
        // DQ (11/16/2007): Added support for another IR node.
           case V_SgFortranDo:
 
@@ -2168,14 +2103,6 @@ addAssociatedNodes ( SgNode* node, set<SgNode*> & nodeList, bool markMemberNodes
 
        // DXN (09/14/2011):
           case V_SgNullifyStatement:
-
-       // Rasmussen (11/12/2018): Added support for Jovial COMPOOL module
-          case V_SgJovialCompoolStatement:
-
-       // Rasmussen (10/23/2018): Added support for Jovial for statement with then construct
-          case V_SgJovialForThenStatement:
-
-          case V_SgMatlabForStatement:
 
        // DQ (7/18/2017): Added support to ignore the new SgDeclarationScope.
           case V_SgDeclarationScope:
@@ -2251,7 +2178,6 @@ addAssociatedNodes ( SgNode* node, set<SgNode*> & nodeList, bool markMemberNodes
             }
 
        // Ignore these SgType cases since we handle types directly, via the addAssociatedNodes() function
-          case V_SgJavaWildcardType:
           case V_SgFunctionType:
           case V_SgMemberFunctionType:
           case V_SgTypeUnknown:
