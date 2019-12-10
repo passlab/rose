@@ -1,3 +1,0 @@
-include_rules
-
-run $(public_file) -o share/test-project README Makefile binary_specimen disassemble.C
