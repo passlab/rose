@@ -3560,7 +3560,7 @@ SgOmpVariablesClause* convertClause(SgOmpClauseBodyStatement* clause_body, std::
     if (current_expressions->size() != 0) {
         std::vector<const char*>::iterator iter;
         for (iter = current_expressions->begin(); iter != current_expressions->end(); iter++) {
-            std::string expr_string = std::string() + "omp " + *iter + "\n";
+            std::string expr_string = std::string() + "varlist " + *iter + "\n";
             omp_parser_init(current_OpenMPIR_to_SageIII.first, expr_string.c_str());
             omp_parse();
         }
