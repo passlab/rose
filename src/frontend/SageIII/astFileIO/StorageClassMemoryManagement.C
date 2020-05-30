@@ -1614,10 +1614,6 @@ void EasyStorage<PreprocessingInfo*>::storeDataInEasyStorageClass(PreprocessingI
   // printf ("In EasyStorage<PreprocessingInfo*>::storeDataInEasyStorageClass(): info->get_file_info() = %p \n",info->get_file_info());
   // printf ("In EasyStorage<PreprocessingInfo*>::storeDataInEasyStorageClass(): info->get_file_info()->get_freepointer() = %p \n",info->get_file_info()->get_freepointer());
 
-  // ROSE-1470
-     Sg_File_Info * file_info = info->get_file_info();
-     file_info->check_file_id("EasyStorage<PreprocessingInfo*>::storeDataInEasyStorageClass", false);
-
      fileInfoIndex = AST_FILE_IO::getGlobalIndexFromSgClassPointer(info->get_file_info());
   // printf ("Saving fileInfoIndex = %d for %p \n",fileInfoIndex, info->get_file_info());
 
@@ -1675,7 +1671,6 @@ PreprocessingInfo* EasyStorage<PreprocessingInfo*>::rebuildDataStoredInEasyStora
 
         // ROSE-1470
            Sg_File_Info * file_info = (Sg_File_Info*)(AST_FILE_IO::getSgClassPointerFromGlobalIndex(fileInfoIndex));
-           file_info->check_file_id("EasyStorage<PreprocessingInfo*>::rebuildDataStoredInEasyStorageClass", false);
            returnInfo->set_file_info(file_info);
 #if 0
            printf ("Check the file Info object just read... \n");
@@ -4375,6 +4370,7 @@ void EasyStorage <rose_graph_integerpair_edge_hash_multimap> :: readFromFile (st
    ****************************************************************************************
 */
 
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
 template <class TYPE>
 void EasyStorage <SgSharedVector<TYPE> > :: storeDataInEasyStorageClass(const SgSharedVector<TYPE>& data_)
 {
@@ -4429,6 +4425,7 @@ SgSharedVector<TYPE> EasyStorage <SgSharedVector<TYPE> > :: rebuildDataStoredInE
 
     return SgSharedVector<TYPE>();
 }
+#endif
 
 /*
    ****************************************************************************************

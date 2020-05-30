@@ -3,6 +3,7 @@
 #define ROSE_ASM_UNPARSER_COMPAT_H
 
 #include "AsmUnparser.h"
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
 
 /** Returns the string representation of an assembly instruction, sans address. */
 ROSE_DLL_API std::string unparseInstruction(SgAsmInstruction*, const Rose::BinaryAnalysis::AsmUnparser::LabelMap *labels=NULL,
@@ -41,20 +42,6 @@ std::string unparseX86Register(SgAsmInstruction*, Rose::BinaryAnalysis::Register
                                const Rose::BinaryAnalysis::RegisterDictionary*);
 
 /*-------------------------------------------------------------------------------------------------------------------------------
- * ARM
- *-------------------------------------------------------------------------------------------------------------------------------*/
-enum ArmSignForExpressionUnparsing 
-{
-  arm_sign_none,
-  arm_sign_plus,
-  arm_sign_minus
-} ;
-
-std::string unparseArmMnemonic(SgAsmArmInstruction*);
-std::string unparseArmExpression(SgAsmExpression*, const Rose::BinaryAnalysis::AsmUnparser::LabelMap*,
-                                 const Rose::BinaryAnalysis::RegisterDictionary*);
-
-/*-------------------------------------------------------------------------------------------------------------------------------
  * PowerPC
  *-------------------------------------------------------------------------------------------------------------------------------*/
 
@@ -78,5 +65,5 @@ std::string unparseM68kMnemonic(SgAsmM68kInstruction*);
 std::string unparseM68kExpression(SgAsmExpression*, const Rose::BinaryAnalysis::AsmUnparser::LabelMap*,
                                   const Rose::BinaryAnalysis::RegisterDictionary*);
 
-
+#endif
 #endif

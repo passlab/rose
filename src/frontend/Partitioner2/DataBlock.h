@@ -1,8 +1,12 @@
 #ifndef ROSE_Partitioner2_DataBlock_H
 #define ROSE_Partitioner2_DataBlock_H
 
+#include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
+
 #include <Partitioner2/BasicTypes.h>
 #include <SageBuilderAsm.h>
+#include <SourceLocation.h>
 
 #include <boost/serialization/access.hpp>
 #include <Sawyer/Attribute.h>
@@ -37,6 +41,7 @@ private:
     std::string comment_;                               // arbitrary comment, shown by printableName.
     std::vector<BasicBlockPtr> attachedBasicBlockOwners_; // attached basic blocks that own this data block, sorted and unique
     std::vector<FunctionPtr> attachedFunctionOwners_;   // attached functions that own this data block, sorted and unique
+    SourceLocation sourceLocation_;                     // optional location of data in source code
     
 
 #ifdef ROSE_HAVE_BOOST_SERIALIZATION_LIB
@@ -62,6 +67,8 @@ private:
             s & BOOST_SERIALIZATION_NVP(attachedBasicBlockOwners_);
             s & BOOST_SERIALIZATION_NVP(attachedFunctionOwners_);
         }
+        if (version >= 3)
+            s & BOOST_SERIALIZATION_NVP(sourceLocation_);
     }
 #endif
     
@@ -109,6 +116,13 @@ public:
      * @{ */
     const std::string& comment() const;
     void comment(const std::string& s);
+    /** @} */
+
+    /** Property: Optional location of data in source code.
+     *
+     * @{ */
+    const SourceLocation& sourceLocation() const { return sourceLocation_; }
+    void sourceLocation(const SourceLocation &loc) { sourceLocation_ = loc; }
     /** @} */
 
     /** Number of attached basic block and function owners.
@@ -159,6 +173,7 @@ private:
 } // namespace
 
 // Class versions must be at global scope
-BOOST_CLASS_VERSION(Rose::BinaryAnalysis::Partitioner2::DataBlock, 2);
+BOOST_CLASS_VERSION(Rose::BinaryAnalysis::Partitioner2::DataBlock, 3);
 
+#endif
 #endif

@@ -19,7 +19,15 @@ namespace CppStdUtilities {
   // if the file can be written the function returns true, otherwise false.
   bool writeFile(std::string filename, std::string data);
 
-  // is true if string 'postfix' is a costfix of string 's'.
+  // append the string 'data' to file with name 'filename'. It opens and closes the file.
+  // if data can be written to the file  the function returns true, otherwise false.
+  bool appendFile(std::string filename, std::string data);
+
+  // is true if string 'prefix' is a prefix of string 's'.
+  // e.g. "cc" is a prefix of "cccbba"
+  bool isPrefix(std::string prefix, std::string s);
+  
+  // is true if string 'postfix' is a postfix of string 's'.
   // e.g. "bba" is a postfix of "cccbba"
   bool isPostfix(std::string const &postfix, std::string const &s);
 

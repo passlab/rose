@@ -1087,24 +1087,31 @@ ResetParentPointers::evaluateInheritedAttribute (
                  // Initially we want to allow this so that we can get the graph of the AST so that I can understand the problem better.
                     if (variableSymbol != NULL)
                        {
-                 // This is bit confusing since what is returned is the SgInitializedName and NOT a declaration!
-                    SgInitializedName *initializedName = variableSymbol->get_declaration();
-                    ROSE_ASSERT(initializedName != NULL);
+                      // This is bit confusing since what is returned is the SgInitializedName and NOT a declaration!
+                         SgInitializedName *initializedName = variableSymbol->get_declaration();
 
-                 // printf ("AST fixup: In a SgVarRefExp found a SgInitializedName = %p \n",initializedName);
+                      // DQ (2/6/2020): Added debugging information.
+                         if (initializedName == NULL)
+                            {
+                              printf ("In resetParentPointers.C: case V_SgVarRefExp: variableSymbol = %p = %s \n",variableSymbol,variableSymbol->class_name().c_str());
+                              printf ("In resetParentPointers.C: case V_SgVarRefExp: variableRefExpression = %p = %s \n",variableRefExpression,variableRefExpression->class_name().c_str());
+                            }
+                         ROSE_ASSERT(initializedName != NULL);
 
-                    if (initializedName->get_parent() == NULL)
-                       {
-                      // Set the parent to be the SgVarRefExp (since setting it to the
-                      // symbol would not productive, because symbols can be shared!)
+                      // printf ("AST fixup: In a SgVarRefExp found a SgInitializedName = %p \n",initializedName);
+
+                         if (initializedName->get_parent() == NULL)
+                            {
+                           // Set the parent to be the SgVarRefExp (since setting it to the
+                           // symbol would not productive, because symbols can be shared!)
 #if DEBUG_PARENT_INITIALIZATION
-                         printf ("Setting parent of %p = %s to %p = %s \n",
-                              initializedName,initializedName->class_name().c_str(),
-                              variableRefExpression,variableRefExpression->class_name().c_str());
+                              printf ("Setting parent of %p = %s to %p = %s \n",
+                                   initializedName,initializedName->class_name().c_str(),
+                                   variableRefExpression,variableRefExpression->class_name().c_str());
 #endif
-                         initializedName->set_parent(variableRefExpression);
-                       }
-                    ROSE_ASSERT(initializedName->get_parent() != NULL);
+                              initializedName->set_parent(variableRefExpression);
+                            }
+                         ROSE_ASSERT(initializedName->get_parent() != NULL);
                        }
 
                     break;
@@ -1836,7 +1843,9 @@ ResetFileInfoParentPointersInMemoryPool::visit(SgNode* node)
 #endif
             // case V_SgFile:
                case V_SgSourceFile:
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
                case V_SgBinaryComposite:
+#endif
                case V_SgUnknownFile:
                   {
                     ROSE_ASSERT(support->get_file_info() != NULL);
@@ -1914,7 +1923,11 @@ resetParentPointersInMemoryPool(SgNode* node)
                globalScope = sourceFile->get_globalScope();
              }
 
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
           ROSE_ASSERT(globalScope != NULL || isSgBinaryComposite(file) != NULL);
+#else
+          ROSE_ASSERT(globalScope != NULL);
+#endif
         }
        else
         {

@@ -2,6 +2,9 @@
 #ifndef ROSE_BinaryAnalysis_Unparser_H
 #define ROSE_BinaryAnalysis_Unparser_H
 
+#include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
+
 #include <Sawyer/CommandLine.h>
 #include <BaseSemantics2.h>
 #include <BinaryEdgeArrows.h>
@@ -19,6 +22,7 @@ struct Settings {
     virtual ~Settings() {}
 
     struct {
+        bool showingSourceLocation;                     /**< Show source file name and line number when available. */
         bool showingReasons;                            /**< Show reasons for function existing. */
         bool showingDemangled;                          /**< Show demangled name in preference to mangled name. */
         struct {
@@ -40,6 +44,7 @@ struct Settings {
     } function;                                         /**< Settings for functions. */
 
     struct {
+        bool showingSourceLocation;                     /**< Show source file name and line number when available. */
         struct {
             bool showingPredecessors;                   /**< Show basic block predecessors? */
             bool showingSuccessors;                     /**< Show basic block successors? */
@@ -50,6 +55,10 @@ struct Settings {
             bool showingReachability;                   /**< Show code reachability in the basic block prologue area. */
         } reach;                                        /**< Reachability analysis results. */
     } bblock;                                           /**< Settings for basic blocks. */
+
+    struct {
+        bool showingSourceLocation;                     /**< Show source file ane line number when available. */
+    } dblock;
 
     struct {
         struct {
@@ -115,4 +124,5 @@ Sawyer::CommandLine::SwitchGroup commandLineSwitches(Settings &settings);
 } // namespace
 } // namespace
 
+#endif
 #endif

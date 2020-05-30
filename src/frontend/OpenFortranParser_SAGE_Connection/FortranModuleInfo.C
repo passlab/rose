@@ -62,6 +62,13 @@ FortranModuleInfo::set_inputDirs(SgProject* project) {
   vector<string> args = project->get_originalCommandLineArgumentList();
   string  rmodDir;
 
+  // Add path to iso_c_binding.rmod. The intrinsic modules have been placed in the
+  // 3rdPartyLibraries because they could be compiler dependent. If placed there we could
+  // reasonable have multiple versions at some point.
+  //
+  std::string intrinsic_mod_path = findRoseSupportPathFromSource("src/3rdPartyLibraries/fortran-parser", "share/rose");
+  inputDirs.push_back(intrinsic_mod_path);
+
   int sizeArgs = args.size();
 
   for (int i = 0; i< sizeArgs; i++) {
@@ -150,8 +157,6 @@ FortranModuleInfo::getModule(string modName)
 
      if (SgProject::get_verbose() > 1)
           printf ("In FortranModuleInfo::getModule(%s): nameWithPath = %s \n",modName.c_str(),nameWithPath.c_str());
-
-  // if (createSgSourceFile(nameWithPath) == NULL )
 
 #if 0
      printf ("********* BUILD NEW MODULE FILE IF NOT ALREADY BUILT **************** \n");
@@ -317,32 +322,6 @@ FortranModuleInfo::createSgSourceFile(string modName)
 
      return newFile;
    }
-
-
-#if 0
-// DQ (10/1/2010): This support is now better implemented directly in the FortranModuleInfo::getModule() function.
-void
-FortranModuleInfo::addMapping(string modName,SgModuleStatement* modNode)
-   {
-     printf ("In FortranModuleInfo::addMapping() modName = %s modNode = %p \n",modName.c_str(),modNode);
-     ROSE_ASSERT(modNode != NULL);
-
-     if ( moduleNameAstMap[modName] == NULL ) 
-        {
-          moduleNameAstMap[modName] = modNode;
-        }
-       else
-        {
-          cerr << "Warning: The map entry for " << modName << " is not empty. " << endl;
-        }
-
-// #ifdef USE_STMT_DEBUG
-     printf ("In FortranModuleInfo::addMapping(%s,%p): display the moduleNameAstMap \n",modName.c_str(),modNode);
-     dumpMap();
-     printf ("DONE: In FortranModuleInfo::addMapping(%s,%p): display the moduleNameAstMap \n\n",modName.c_str(),modNode);
-// #endif
-  }
-#endif
 
 
 void

@@ -1,10 +1,12 @@
-#include <sage3basic.h>
 #include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
+#include <sage3basic.h>
 
 #include <AsmUnparser_compat.h>
 #include <BinaryDebugger.h>
 #include <BinaryLoader.h>
 #include <BinarySerialIo.h>
+#include <BinaryVxcoreParser.h>
 #include <CommandLine.h>
 #include <Diagnostics.h>
 #include <DisassemblerM68k.h>
@@ -13,6 +15,9 @@
 #include <SRecord.h>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/format.hpp>
+#include <boost/regex.hpp>
 #include <Partitioner2/Engine.h>
 #include <Partitioner2/Modules.h>
 #include <Partitioner2/ModulesElf.h>
@@ -23,6 +28,8 @@
 #include <Partitioner2/ModulesX86.h>
 #include <Partitioner2/Semantics.h>
 #include <Partitioner2/Utility.h>
+#include <rose_getline.h>
+#include <rose_strtoull.h>
 #include <Sawyer/FileSystem.h>
 #include <Sawyer/GraphAlgorithm.h>
 #include <Sawyer/GraphTraversal.h>
@@ -244,6 +251,28 @@ Engine::loaderSwitches(LoaderSettings &settings) {
                    "and archive files are processed without linking.  The default link command is \"" +
                    StringUtility::cEscape(settings.linker) + "\"."));
 
+    sg.insert(Switch("env-erase-name")
+              .argument("variable", anyParser(settings.envEraseNames))
+              .whichValue(SAVE_ALL)
+              .doc("Remove the specified variable from the environment when processing specimens with the \"run:\" schema. This "
+                   "switch may appear multiple times to remove multiple variables. The default is to not erase any variables. "
+                   "See also, @s{env-erase-pattern}."));
+
+    sg.insert(Switch("env-erase-pattern")
+              .argument("regular-expression", anyParser(settings.envErasePatterns))
+              .whichValue(SAVE_ALL)
+              .doc("Remove variables whose names match the specified regular expression when processing specimens with the "
+                   "\"run:\" schema. You must specify \"^\" and/or \"$\" if you want the regular expression anchored to the "
+                   "beginning and/or end of names. This switch may appear multiple times to supply multiple regular expressions. "
+                   "See also, @s{env-erase-name}."));
+
+    sg.insert(Switch("env-insert")
+              .argument("name=value", anyParser(settings.envInsert))
+              .whichValue(SAVE_ALL)
+              .doc("Add the specified variable and value to the environment when processing specimens with the \"run:\" schema. "
+                   "Insertions occur after all environment variable erasures. This switch may appear multiple times to specify "
+                   "multiple environment variables."));
+
     return sg;
 }
 
@@ -289,12 +318,12 @@ Engine::partitionerSwitches(PartitionerSettings &settings) {
            "no effect if the input is a ROSE Binary Analysis (RBA) file, since the partitioner steps in such an input "
            "have already been completed.");
 
-    sg.insert(Switch("start")
-              .argument("addresses", listParser(nonNegativeIntegerParser(settings.startingVas)))
+    sg.insert(Switch("function-at")
+              .argument("addresses", listParser(nonNegativeIntegerParser(settings.functionStartingVas)))
               .whichValue(SAVE_ALL)
               .explosiveLists(true)
               .doc("List of addresses where recursive disassembly should start in addition to addresses discovered by "
-                   "other methods. Each address listed by this switch will be considered the entry point of a function. "
+                   "other methods. A function entry point will be insterted at each address listed by this switch. "
                    "This switch may appear multiple times, each of which may have multiple comma-separated addresses."));
 
     sg.insert(Switch("use-semantics")
@@ -308,6 +337,19 @@ Engine::partitionerSwitches(PartitionerSettings &settings) {
     sg.insert(Switch("no-use-semantics")
               .key("use-semantics")
               .intrinsicValue(false, settings.base.usingSemantics)
+              .hidden(true));
+
+    sg.insert(Switch("ignore-unknown")
+              .intrinsicValue(true, settings.base.ignoringUnknownInsns)
+              .doc("If set, then any machine instructions that cannot be decoded due to ROSE having an incomplete disassembler "
+                   "are treated as if they were no-ops for the purpose of extending a basic block. Although they will still show "
+                   "up as \"unknown\" in the assembly listing, they will not cause a basic block to be terminated. If this "
+                   "feature is disabled (@s{no-ignore-unknown}) then such instruvctions terminate a basic block. The default "
+                   "is that unknown instructions " +
+                   std::string(settings.base.ignoringUnknownInsns ? "are ignored." : "terminate basic blocks.")));
+    sg.insert(Switch("no-ignore-unknown")
+              .key("ignore-unknown")
+              .intrinsicValue(false, settings.base.ignoringUnknownInsns)
               .hidden(true));
 
     sg.insert(Switch("semantic-memory")
@@ -332,9 +374,29 @@ Engine::partitionerSwitches(PartitionerSettings &settings) {
 
     sg.insert(Switch("follow-ghost-edges")
               .intrinsicValue(true, settings.followingGhostEdges)
-              .doc("When discovering the instructions for a basic block, treat instructions individually rather than "
-                   "looking for opaque predicates.  The @s{no-follow-ghost-edges} switch turns this off.  The default "
-                   "is " + std::string(settings.followingGhostEdges?"true":"false") + "."));
+              .doc("A \"ghost edge\" is a control flow graph (CFG) edge that would be present if the CFG-building analysis "
+                   "looked only at individual instructions, but would be absent when the analysis looks at coarser units "
+                   "of code.  For instance, consider the following x86 assembly code:"
+
+                   "@numbered{mov eax, 0}"              // 1
+                   "@numbered{cmp eax, 0}"              // 2
+                   "@numbered{jne 5}"                   // 3
+                   "@numbered{nop}"                     // 4
+                   "@numbered{hlt}"                     // 5
+
+                   "If the analysis looks only at instruction 3, then it appears to have two CFG successors: instructions "
+                   "4 and 5. But if the analysis looks at the first three instructions collectively it will ascertain that "
+                   "instruction 3 has an opaque predicate, that the only valid CFG successor is instruction 4, and that the "
+                   "edge from 3 to 5 is a \"ghost\". In fact, if there are no other incoming edges to these instructions, "
+                   "then instructions 1 through 4 will form a basic block with the (unconditional) branch in the interior. "
+                   "The ability to look at larger units of code than single instructions is enabled with the @s{use-semantics} "
+                   "switch.\n\n"
+
+                   "This @s{follow-ghost-edges} switch causes the ghost edges to be added back into the CFG as real edges, which "
+                   "might force a basic block to end. For instance, in this example, turning on @s{follow-ghost-edges} will "
+                   "force the first basic block to end with the \"jne\" instruction. The @s{no-follow-ghost-edges} switch turns "
+                   "this feature off. By default, this feature is " +
+                   std::string(settings.followingGhostEdges?"enabled":"disabled") + "."));
     sg.insert(Switch("no-follow-ghost-edges")
               .key("follow-ghost-edges")
               .intrinsicValue(false, settings.followingGhostEdges)
@@ -385,10 +447,14 @@ Engine::partitionerSwitches(PartitionerSettings &settings) {
 
     sg.insert(Switch("find-dead-code")
               .intrinsicValue(true, settings.findingDeadCode)
-              .doc("Use ghost edges (non-followed control flow from branches with opaque predicates) to locate addresses "
-                   "for unreachable code, then recursively discover basic blocks at those addresses and add them to the "
-                   "same function.  The @s{no-find-dead-code} switch turns this off.  The default is " +
-                   std::string(settings.findingDeadCode?"true":"false") + "."));
+              .doc("If ghost edges are being discovered (see @s{follow-ghost-edges} for the definition of \"ghost "
+                   "edge\") and are not being inserted into the global control flow graph (controlled by "
+                   "@s{follow-ghost-edges}) then the target address of the ghost edge might not be used as a code "
+                   "address during the instruction discovery phase. This switch, @s{find-dead-code}, will cause the "
+                   "target addresses of ghost edges to be used to discover more instructions even though the ghost "
+                   "edges don't appear in the control flow graph. The @s{no-find-dead-code} switch turns this off. "
+                   "The default is that this feature is " +
+                   std::string(settings.findingDeadCode?"enabled":"disabled") + "."));
     sg.insert(Switch("no-find-dead-code")
               .key("find-dead-code")
               .intrinsicValue(false, settings.findingDeadCode)
@@ -726,12 +792,9 @@ Engine::engineSwitches(EngineSettings &settings) {
               .explosiveLists(true)
               .whichValue(SAVE_ALL)
               .doc("Directories containing configuration files, or configuration files themselves.  A directory is searched "
-                   "recursively searched for files whose names end with \".json\" or and each file is parsed and used to "
-                   "to configure the partitioner.  The JSON file contents is defined by the Carnegie Mellon University "
-                   "Software Engineering Institute. It should have a top-level \"config.exports\" table whose keys are "
-                   "function names and whose values are have a \"function.delta\" integer. The delta does not include "
-                   "popping the return address from the stack in the final RET instruction.  Function names of the form "
-                   "\"lib:func\" are translated to the ROSE format \"func@@lib\"."));
+                   "recursively searched for files whose names that end with \".json\" or \".yaml\".  Each file is parsed and "
+                   "used to configure the partitioner. This switch may appear more than once and/or a comma-separated list of "
+                   "names can be specified.\n\n" + Configuration::fileFormatDoc()));
     return sg;
 }
 
@@ -842,6 +905,14 @@ Engine::specimenNameDocumentation() {
             "execute permissions. If no letters are present after the equal sign, then the memory has no permissions; "
             "if the equal sign itself is also missing then the segments are given read, write, and execute permission.}"
 
+            "@bullet{If the name begins with the string \"vxcore:\" then it is treated as a special VxWorks core dump "
+            "in a format defined by ROSE. The complete specification has the syntax \"vxcore:[@v{memory_attributes}]"
+            ":[@v{file_attributes}]:@v{file_name}\". The parts in square brackets are optional. The only memory attribute "
+            "recognized at this time is an equal sign (\"=\") followed by zero of more of the letters \"r\" (read), "
+            "\"w\" (write), and \"x\" (execute) to specify the mapping permissions. The default mapping permission if "
+            "no equal sign is specified is read, write, and execute.  The only file attribute recognized at this time is "
+            "\"version=@v{v}\" where @v{v} is a version number, and ROSE currently supports only version 1.}"
+
             "@bullet{If the name ends with \".srec\" and doesn't match the previous list of prefixes then it is assumed "
             "to be a text file containing Motorola S-Records and will be parsed as such and loaded into the memory map "
             "with read, write, and execute permissions.}"
@@ -920,6 +991,7 @@ Engine::isNonContainer(const std::string &name) {
             boost::starts_with(name, "run:")  ||        // run a process in a debugger, then map into MemoryMap
             boost::starts_with(name, "srec:") ||        // Motorola S-Record format
             boost::ends_with(name, ".srec")   ||        // Motorola S-Record format
+            boost::starts_with(name, "vxcore:") ||      // Jim Lee's format of a VxWorks core dump
             isRbaFile(name));                           // ROSE Binary Analysis file
 }
 
@@ -973,9 +1045,9 @@ Engine::parseContainers(const std::vector<std::string> &fileNames) {
             }
             if (!filesToLink.empty()) {
                 linkerOutput.stream().close();          // will be written by linker command
-                if (ModulesElf::tryLink(settings_.loader.linker, linkerOutput.name().native(), filesToLink, mlog[WARN])) {
+                if (ModulesElf::tryLink(settings_.loader.linker, linkerOutput.name().string(), filesToLink, mlog[WARN])) {
                     containerFiles = nonLinkedFiles;
-                    containerFiles.push_back(linkerOutput.name().native());
+                    containerFiles.push_back(linkerOutput.name().string());
                 } else {
                     mlog[ERROR] <<"linking objects and/or archives failed; falling back to internal (incomplete) linker\n";
                     filesToLink.clear();
@@ -993,9 +1065,9 @@ Engine::parseContainers(const std::vector<std::string> &fileNames) {
                 if (ModulesElf::isStaticArchive(file)) {
                     std::vector<boost::filesystem::path> objects = ModulesElf::extractStaticArchive(tempDir.name(), file);
                     if (objects.empty())
-                        mlog[WARN] <<"empty static archive \"" <<StringUtility::cEscape(file.native()) <<"\"\n";
+                        mlog[WARN] <<"empty static archive \"" <<StringUtility::cEscape(file.string()) <<"\"\n";
                     BOOST_FOREACH (const boost::filesystem::path &objectFile, objects)
-                        expandedList.push_back(objectFile.native());
+                        expandedList.push_back(objectFile.string());
                 } else {
                     expandedList.push_back(file);
                 }
@@ -1005,17 +1077,7 @@ Engine::parseContainers(const std::vector<std::string> &fileNames) {
 
         // Process through ROSE's frontend()
         if (!containerFiles.empty()) {
-#if 0 // [Robb Matzke 2019-01-29]: old method calling ::frontend
-            std::vector<std::string> frontendArgs;
-            frontendArgs.push_back("/proc/self/exe");       // I don't think frontend actually uses this
-            frontendArgs.push_back("-rose:binary");
-            frontendArgs.push_back("-rose:read_executable_file_format_only");
-            BOOST_FOREACH (const boost::filesystem::path &file, containerFiles)
-                frontendArgs.push_back(file.native());
-            SgProject *project = ::frontend(frontendArgs);
-#else // [Robb Matzke 2019-01-29]: new method calling Engine::roseFrontendReplacement
             SgProject *project = roseFrontendReplacement(containerFiles);
-#endif
             ASSERT_not_null(project);                       // an exception should have been thrown
 
             std::vector<SgAsmInterpretation*> interps = SageInterface::querySubTree<SgAsmInterpretation>(project);
@@ -1050,7 +1112,7 @@ Engine::roseFrontendReplacement(const std::vector<boost::filesystem::path> &file
     SgAsmGenericFileList *fileList = new SgAsmGenericFileList;
     BOOST_FOREACH (const boost::filesystem::path &fileName, fileNames) {
         SAWYER_MESG(mlog[TRACE]) <<"parsing " <<fileName <<"\n";
-        SgAsmGenericFile *file = SgAsmExecutableFileFormat::parseBinaryFormat(fileName.native().c_str());
+        SgAsmGenericFile *file = SgAsmExecutableFileFormat::parseBinaryFormat(fileName.string().c_str());
         ASSERT_not_null(file);
 #ifdef ROSE_HAVE_LIBDWARF
         readDwarf(file);
@@ -1073,10 +1135,10 @@ Engine::roseFrontendReplacement(const std::vector<boost::filesystem::path> &file
     binaryComposite->set_binary_only(true);
     binaryComposite->set_requires_C_preprocessor(false);
     //binaryComposite->set_isObjectFile(???) -- makes no sense since the composite can be multiple files of different types
-    binaryComposite->set_sourceFileNameWithPath(boost::filesystem::absolute(fileNames[0]).native()); // best we can do
-    binaryComposite->set_sourceFileNameWithoutPath(fileNames[0].filename().native());                // best we can do
-    binaryComposite->initializeSourcePosition(fileNames[0].native());                                // best we can do
-    binaryComposite->set_originalCommandLineArgumentList(std::vector<std::string>(1, fileNames[0].native())); // best we can do
+    binaryComposite->set_sourceFileNameWithPath(boost::filesystem::absolute(fileNames[0]).string()); // best we can do
+    binaryComposite->set_sourceFileNameWithoutPath(fileNames[0].filename().string());                // best we can do
+    binaryComposite->initializeSourcePosition(fileNames[0].string());                                // best we can do
+    binaryComposite->set_originalCommandLineArgumentList(std::vector<std::string>(1, fileNames[0].string())); // best we can do
     ASSERT_not_null(binaryComposite->get_file_info());
 
     // Create one or more SgAsmInterpretation nodes. If all the SgAsmGenericFile objects are ELF files, then there's one
@@ -1192,7 +1254,7 @@ Engine::loadNonContainers(const std::vector<std::string> &fileNames) {
             bool doReplace = false;
             if (colon2 == std::string::npos) {
                 // [Robb Matzke 2017-07-24]: deprecated. ROSE used to accept "run:/name/of/executable" which is a
-                // different syntax than what all the other methods accept (the others all have two colons).
+                // different syntax than what all the other methods accept (the others all have at least two colons).
                 exeName = fileName.substr(colon1+1);
             } else {
                 std::string optionsStr = fileName.substr(colon1+1, colon2-(colon1+1));
@@ -1216,6 +1278,18 @@ Engine::loadNonContainers(const std::vector<std::string> &fileNames) {
                 .set(Debugger::REDIRECT_INPUT)
                 .set(Debugger::REDIRECT_OUTPUT)
                 .set(Debugger::REDIRECT_ERROR);
+            BOOST_FOREACH (const std::string &name, settings_.loader.envEraseNames)
+                subordinate.eraseEnvironmentVariable(name);
+            BOOST_FOREACH (const boost::regex &re, settings_.loader.envErasePatterns)
+                subordinate.eraseMatchingEnvironmentVariables(re);
+            BOOST_FOREACH (const std::string &var, settings_.loader.envInsert) {
+                size_t eq = var.find('=');
+                if (std::string::npos == eq)
+                    throw std::runtime_error("no '=' in NAME=VALUE: \"" + StringUtility::cEscape(var) + "\"");
+                if (eq == 0)
+                    throw std::runtime_error("empty name in NAME=VALUE: \"" + StringUtility::cEscape(var) + "\"");
+                subordinate.insertEnvironmentVariable(var.substr(0, eq), var.substr(eq+1));
+            }
             Debugger::Ptr debugger = Debugger::instance(subordinate);
 
             // Set breakpoints for all executable addresses in the memory map created by the Linux kernel. Since we're doing
@@ -1292,8 +1366,20 @@ Engine::loadNonContainers(const std::vector<std::string> &fileNames) {
                     mlog[ERROR] <<resource <<":" <<(i+1) <<": S-Record: " <<srecs[i].error() <<"\n";
             }
             SRecord::load(srecs, map_, true /*create*/, perms);
+        } else if (boost::starts_with(fileName, "vxcore:")) {
+            // format is "vxcore:[MEMORY_ATTRS]:[FILE_ATTRS]:FILE_NAME
+            loadVxCore(fileName.substr(7));             // the part after "vxcore:"
         }
     }
+}
+
+void
+Engine::loadVxCore(const std::string &spec) {
+    VxcoreParser parser;
+    boost::filesystem::path fileName = parser.parseUrl(spec);
+    parser.parse(fileName, map_);
+    if (settings_.disassembler.isaName.empty())
+        settings_.disassembler.isaName = parser.isaName();
 }
 
 void
@@ -1593,7 +1679,7 @@ Engine::runPartitionerInit(Partitioner &partitioner) {
     Sawyer::Message::Stream where(mlog[WHERE]);
 
     SAWYER_MESG(where) <<"labeling addresses\n";
-    labelAddresses(partitioner);
+    labelAddresses(partitioner, partitioner.configuration());
 
     SAWYER_MESG(where) <<"marking configured basic blocks\n";
     makeConfiguredDataBlocks(partitioner, partitioner.configuration());
@@ -1608,7 +1694,7 @@ Engine::runPartitionerInit(Partitioner &partitioner) {
     makeInterruptVectorFunctions(partitioner, settings_.partitioner.interruptVector);
 
     SAWYER_MESG(where) <<"marking user-defined functions\n";
-    makeUserFunctions(partitioner, settings_.partitioner.startingVas);
+    makeUserFunctions(partitioner, settings_.partitioner.functionStartingVas);
 }
 
 void
@@ -1690,7 +1776,11 @@ Engine::runPartitionerFinal(Partitioner &partitioner) {
         SAWYER_MESG(where) <<"demangling names\n";
         Modules::demangleFunctionNames(partitioner);
     }
-
+    if (SgBinaryComposite *bc = SageInterface::getEnclosingNode<SgBinaryComposite>(interp_)) {
+        // [Robb Matzke 2020-02-11]: This only works if ROSE was configured with external DWARF and ELF libraries.
+        SAWYER_MESG(where) <<"mapping source locations\n";
+        partitioner.sourceLocations().insertFromDebug(bc);
+    }
     if (libcStartMain_)
         libcStartMain_->nameMainFunction(partitioner);
 }
@@ -1797,8 +1887,13 @@ Engine::loadPartitioner(const boost::filesystem::path &name, SerialIo::Format fm
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void
-Engine::labelAddresses(Partitioner &partitioner) {
+Engine::labelAddresses(Partitioner &partitioner, const Configuration &configuration) {
     Modules::labelSymbolAddresses(partitioner, interp_);
+
+    BOOST_FOREACH (const AddressConfig &c, configuration.addresses().values()) {
+        if (!c.name().empty())
+            partitioner.addressName(c.address(), c.name());
+    }
 }
 
 std::vector<DataBlock::Ptr>
@@ -2168,7 +2263,7 @@ Engine::makeFunctionFromInterFunctionCalls(Partitioner &partitioner, rose_addr_t
             if (debug) {
                 debug <<me <<bb->printableName() <<"\n";
                 BOOST_FOREACH (SgAsmInstruction *insn, bb->instructions())
-                    debug <<me <<"  " <<unparseInstructionWithAddress(insn) <<"\n";
+                    debug <<me <<"  " <<partitioner.unparse(insn) <<"\n";
             }
             AddressIntervalSet bbVas = bb->insnAddresses();
             if (!bbVas.leastNonExistent(bb->address()).assignTo(startVa)) // address of first hole, or following address
@@ -3017,3 +3112,5 @@ Engine::pythonParseSingle(const std::string &specimen, const std::string &purpos
 } // namespace
 } // namespace
 } // namespace
+
+#endif

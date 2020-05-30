@@ -284,7 +284,9 @@ namespace sg
     GEN_VISIT(SgVariableDeclaration)
     GEN_VISIT(SgVariableDefinition)
     GEN_VISIT(SgEnumDeclaration)
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
     GEN_VISIT(SgAsmStmt)
+#endif
     GEN_VISIT(SgTypedefDeclaration)
     GEN_VISIT(SgFunctionTypeTable)
     GEN_VISIT(SgExprStatement)
@@ -562,8 +564,10 @@ namespace sg
     GEN_VISIT(SgCommonSymbol)
     GEN_VISIT(SgRenameSymbol)
     GEN_VISIT(SgFunctionSymbol)
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
     GEN_VISIT(SgAsmBinaryAddressSymbol)
     GEN_VISIT(SgAsmBinaryDataSymbol)
+#endif
     GEN_VISIT(SgAliasSymbol)
     GEN_VISIT(SgSymbol)
 
@@ -571,7 +575,7 @@ namespace sg
     GEN_VISIT(SgBinaryComposite)
     GEN_VISIT(SgAsmBlock)
     GEN_VISIT(SgAsmOperandList)
-    GEN_VISIT(SgAsmArmInstruction)
+    GEN_VISIT(SgAsmArm64Instruction)
     GEN_VISIT(SgAsmX86Instruction)
     GEN_VISIT(SgAsmPowerpcInstruction)
     GEN_VISIT(SgAsmInstruction)
@@ -593,7 +597,6 @@ namespace sg
     GEN_VISIT(SgAsmUnaryPlus)
     GEN_VISIT(SgAsmUnaryMinus)
     GEN_VISIT(SgAsmUnaryRrx)
-    GEN_VISIT(SgAsmUnaryArmSpecialRegisterList)
     GEN_VISIT(SgAsmUnaryExpression)
     GEN_VISIT(SgAsmMemoryReferenceExpression)
     GEN_VISIT(SgAsmControlFlagsExpression)
@@ -872,6 +875,8 @@ namespace sg
     GEN_VISIT(SgPointerType)
     GEN_VISIT(SgNamedType)
     GEN_VISIT(SgQualifiedNameType)
+    GEN_VISIT(SgTemplateTypedefDeclaration)
+    
    // DQ (4/5/2017): Added this case that shows up using GNU 6.1 and Boost 1.51 (or Boost 1.52).
     GEN_VISIT(SgDeclType)
     GEN_VISIT(SgAutoType)
@@ -1176,39 +1181,31 @@ namespace sg
 ///   SgStatement* stmt = assert_sage_type<SgStatement>(expr.get_parent());
 ///   ROSE_ASSERT(stmt);
 /// \endcode
+/// @{
   template <class SageNode>
   SageNode* assert_sage_type(SgNode* n, const char* f = 0, size_t ln = 0)
   {
     return sg::dispatch(TypeRecoveryHandler<SageNode>(f, ln), n);
   }
 
-/// \overload
   template <class SageNode>
   const SageNode* assert_sage_type(const SgNode* n, const char* f = 0, size_t ln = 0)
   {
     return sg::dispatch(TypeRecoveryHandler<const SageNode>(f, ln), n);
   }
 
-/// \brief   asserts that n has type SageNode
-/// \details the ROSE assert in the following example holds b/c assert_sage_type
-///          aborts if the input node is not a SgStatement
-/// \code
-///   SgStatement* stmt = assert_sage_type<SgStatement>(expr.get_parent());
-///   ROSE_ASSERT(stmt);
-/// \endcode
   template <class SageNode>
   SageNode& assert_sage_type(SgNode& n, const char* f = 0, size_t ln = 0)
   {
     return *sg::dispatch(TypeRecoveryHandler<SageNode>(f, ln), &n);
   }
 
-/// \overload
   template <class SageNode>
   const SageNode& assert_sage_type(const SgNode& n, const char* f = 0, size_t ln = 0)
   {
     return *sg::dispatch(TypeRecoveryHandler<const SageNode>(f, ln), &n);
   }
-
+/// @}
 
 /// \brief swaps the parent pointer of two nodes
 /// \note  internal use

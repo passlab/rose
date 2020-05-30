@@ -1,4 +1,7 @@
+#include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
 #include <sage3basic.h>
+
 #include <BaseSemantics2.h>
 #include <BinaryReachability.h>
 #include <BinaryUnparserBase.h>
@@ -7,6 +10,7 @@
 #include <Partitioner2/BasicTypes.h>
 #include <Partitioner2/Partitioner.h>
 #include <Sawyer/ProgressBar.h>
+#include <SourceLocation.h>
 #include <stringify.h>
 #include <TraceSemantics2.h>
 
@@ -329,6 +333,7 @@ Base::juxtaposeColumns(const std::vector<std::string> &parts, const std::vector<
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 Settings::Settings() {
+    function.showingSourceLocation = true;
     function.showingReasons = true;
     function.showingDemangled = true;
     function.cg.showing = true;
@@ -338,11 +343,14 @@ Settings::Settings() {
     function.noop.showing = true;
     function.mayReturn.showing = true;
 
+    bblock.showingSourceLocation = true;
     bblock.cfg.showingPredecessors = true;
     bblock.cfg.showingSuccessors = true;
     bblock.cfg.showingSharing = true;
     bblock.cfg.showingArrows = false;
     bblock.reach.showingReachability = true;
+
+    dblock.showingSourceLocation = true;
 
     insn.address.showing = true;
     insn.address.fieldWidth = 11;                       // "0x" + 8 hex digits + ":"
@@ -378,6 +386,7 @@ Settings::full() {
 Settings
 Settings::minimal() {
     Settings s = full();
+    s.function.showingSourceLocation = false;
     s.function.showingReasons = false;
     s.function.showingDemangled = false;
     s.function.cg.showing = false;
@@ -386,11 +395,14 @@ Settings::minimal() {
     s.function.noop.showing = false;
     s.function.mayReturn.showing = false;
 
+    s.bblock.showingSourceLocation = false;
     s.bblock.cfg.showingPredecessors = false;
     s.bblock.cfg.showingSuccessors = false;
     s.bblock.cfg.showingSharing = false;
     s.bblock.cfg.showingArrows = false;
     s.bblock.reach.showingReachability = false;
+
+    s.dblock.showingSourceLocation = false;
 
     s.insn.address.showing = false;
     s.insn.address.fieldWidth = 8;
@@ -422,6 +434,10 @@ commandLineSwitches(Settings &settings) {
            "blocks, data blocks, and functions to a textual representation.");
 
     //-----  Functions -----
+
+    insertBooleanSwitch(sg, "function-source-location", settings.function.showingSourceLocation,
+                        "Show the file name, line number, and column number of the function's definition in source code "
+                        "if that information is available.");
 
     insertBooleanSwitch(sg, "function-reasons", settings.function.showingReasons,
                         "Show the list of reasons why a function was created.");
@@ -463,6 +479,10 @@ commandLineSwitches(Settings &settings) {
 
     //----- Basic blocks -----
 
+    insertBooleanSwitch(sg, "bb-source-location", settings.bblock.showingSourceLocation,
+                        "Show the file name, line number, and column number of the basic block's definition in source code "
+                        "if that information is available.");
+
     insertBooleanSwitch(sg, "bb-cfg-predecessors", settings.bblock.cfg.showingPredecessors,
                         "For each basic block, show its control flow graph predecessors.");
 
@@ -485,6 +505,10 @@ commandLineSwitches(Settings &settings) {
                         "nothing is shown.");
 
     //----- Data blocks -----
+
+    insertBooleanSwitch(sg, "db-source-location", settings.dblock.showingSourceLocation,
+                        "Show the file name, line number, and column number of the data block's definition in source code "
+                        "if that information is available.");
 
     //----- Instructions -----
 
@@ -735,6 +759,8 @@ Base::emitFunctionPrologue(std::ostream &out, const P2::Function::Ptr &function,
             out <<"\n";
         }
         state.frontUnparser().emitFunctionComment(out, function, state);
+        if (settings().function.showingSourceLocation)
+            state.frontUnparser().emitFunctionSourceLocation(out, function, state);
         if (settings().function.showingReasons)
             state.frontUnparser().emitFunctionReasons(out, function, state);
         if (settings().function.cg.showing) {
@@ -850,6 +876,18 @@ Base::emitFunctionBody(std::ostream &out, const P2::Function::Ptr &function, Sta
         rose_addr_t nextBlockVa = function->address();
         BOOST_FOREACH (const InsnsOrData &block, blocks)
             boost::apply_visitor(EmitBlockVisitor(out, function, nextBlockVa, state), block);
+    }
+}
+
+void
+Base::emitFunctionSourceLocation(std::ostream &out, const P2::Function::Ptr &function, State &state) const {
+    if (nextUnparser()) {
+        nextUnparser()->emitFunctionSourceLocation(out, function, state);
+    } else {
+        if (!function->sourceLocation().isEmpty()) {
+            state.frontUnparser().emitLinePrefix(out, state);
+            out <<";;; defined at " <<function->sourceLocation() <<"\n";
+        }
     }
 }
 
@@ -1093,7 +1131,6 @@ Base::emitFunctionMayReturn(std::ostream &out, const P2::Function::Ptr &function
     }
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                                      Basic Blocks
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1116,6 +1153,8 @@ Base::emitBasicBlockPrologue(std::ostream &out, const P2::BasicBlock::Ptr &bb, S
         nextUnparser()->emitBasicBlockPrologue(out, bb, state);
     } else {
         state.frontUnparser().emitBasicBlockComment(out, bb, state);
+        if (settings().bblock.showingSourceLocation)
+            state.frontUnparser().emitBasicBlockSourceLocation(out, bb, state);
         if (settings().bblock.cfg.showingSharing)
             state.frontUnparser().emitBasicBlockSharing(out, bb, state);
         if (settings().bblock.cfg.showingPredecessors)
@@ -1174,6 +1213,18 @@ Base::emitBasicBlockEpilogue(std::ostream &out, const P2::BasicBlock::Ptr &bb, S
         }
         if (settings().bblock.cfg.showingSuccessors)
             state.frontUnparser().emitBasicBlockSuccessors(out, bb, state);
+    }
+}
+
+void
+Base::emitBasicBlockSourceLocation(std::ostream &out, const P2::BasicBlock::Ptr &bb, State &state) const {
+    if (nextUnparser()) {
+        nextUnparser()->emitBasicBlockSourceLocation(out, bb, state);
+    } else {
+        if (!bb->sourceLocation().isEmpty()) {
+            state.frontUnparser().emitLinePrefix(out, state);
+            out <<"\t;; defined at " <<bb->sourceLocation() <<"\n";
+        }
     }
 }
 
@@ -1396,6 +1447,8 @@ Base::emitDataBlockPrologue(std::ostream &out, const P2::DataBlock::Ptr &db, Sta
     if (nextUnparser()) {
         nextUnparser()->emitDataBlockPrologue(out, db, state);
     } else {
+        if (settings().dblock.showingSourceLocation)
+            state.frontUnparser().emitDataBlockSourceLocation(out, db, state);
         if (!db->comment().empty())
             state.frontUnparser().emitCommentBlock(out, db->comment(), state, "\t;; ");
 
@@ -1455,7 +1508,17 @@ Base::emitDataBlockEpilogue(std::ostream &out, const P2::DataBlock::Ptr &db, Sta
     }
 }
 
-
+void
+Base::emitDataBlockSourceLocation(std::ostream &out, const P2::DataBlock::Ptr &db, State &state) const {
+    if (nextUnparser()) {
+        nextUnparser()->emitDataBlockSourceLocation(out, db, state);
+    } else {
+        if (!db->sourceLocation().isEmpty()) {
+            state.frontUnparser().emitLinePrefix(out, state);
+            out <<"\t;; defined at " <<db->sourceLocation() <<"\n";
+        }
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                                      Instructions
@@ -1655,7 +1718,7 @@ Base::emitInstructionOperands(std::ostream &out, SgAsmInstruction *insn, State &
     ASSERT_not_null(insn);
     if (nextUnparser()) {
         nextUnparser()->emitInstructionOperands(out, insn, state);
-    } else {
+    } else if (insn->get_operandList()) {
         const SgAsmExpressionPtrList &operands = insn->get_operandList()->get_operands();
         for (size_t i=0; i<operands.size(); ++i) {
             if (i > 0)
@@ -1999,3 +2062,5 @@ Base::orderedBlockSuccessors(const P2::Partitioner &partitioner, const P2::Basic
 } // namespace
 } // namespace
 } // namespace
+
+#endif

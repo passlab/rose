@@ -95,9 +95,6 @@ tools:
 	$(MAKE) -C $(top_builddir)/projects/pragmaParsing
 	$(MAKE) -C $(top_builddir)/projects/UpcTranslation
 	$(MAKE) -C $(top_builddir)/projects/ArithmeticMeasureTool
-if ROSE_FRONTEND_COMPILER_DEFAULT_IS_CXX11
-	$(MAKE) -C $(top_builddir)/projects/typeforge
-endif
 if ROSE_BUILD_PROJECTS_DIRECTORY_SUPPORT
 	$(MAKE) -C $(top_builddir)/tutorial
 endif
@@ -118,9 +115,7 @@ install-tools: install-core tools
 	$(MAKE) install -C $(top_builddir)/projects/pragmaParsing
 	$(MAKE) install -C $(top_builddir)/projects/UpcTranslation
 	$(MAKE) install -C $(top_builddir)/projects/ArithmeticMeasureTool
-if ROSE_FRONTEND_COMPILER_DEFAULT_IS_CXX11
-	$(MAKE) install -C $(top_builddir)/projects/typeforge
-endif
+	$(MAKE) install -C $(top_builddir)/tests/nonsmoke/functional/roseTests/astInliningTests
 if ROSE_BUILD_PROJECTS_DIRECTORY_SUPPORT
 	$(MAKE) install -C $(top_builddir)/tutorial
 endif
@@ -174,9 +169,6 @@ check-tools: tools
 	$(MAKE) check -C $(top_builddir)/projects/pragmaParsing
 	$(MAKE) check -C $(top_builddir)/projects/UpcTranslation
 	$(MAKE) check -C $(top_builddir)/projects/ArithmeticMeasureTool
-if ROSE_FRONTEND_COMPILER_DEFAULT_IS_CXX11
-	$(MAKE) check -C $(top_builddir)/projects/typeforge
-endif
 if ROSE_BUILD_PROJECTS_DIRECTORY_SUPPORT
 	$(MAKE) check -C $(top_builddir)/tutorial
 endif
@@ -345,9 +337,14 @@ install-exec-local:
 
 install-data-local: uninstall-local
 	-mkdir -p $(DESTDIR)$(includedir)
+if ROSE_USE_CLANG_FRONTEND
+	mkdir -p "$(DESTDIR)$(includedir)/clang"
+	cp -R $(top_builddir)/include-staging/* "$(DESTDIR)$(includedir)/clang"
+else
 #	DQ (11/1/2011): The EDG 4.x support does not require a separate include-staging directory.
 	mkdir -p "$(DESTDIR)$(includedir)/edg"
 	cp -R $(top_builddir)/include-staging/* "$(DESTDIR)$(includedir)/edg"
+endif
 #	endif
 	@echo '*****************************************************************'
 	@echo '***** make install-data rule complete (terminated normally) *****'

@@ -1,5 +1,7 @@
 #ifndef ROSE_SageBuilderAsm_H
 #define ROSE_SageBuilderAsm_H
+#include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
 
 namespace Rose {
 
@@ -38,31 +40,34 @@ SgBinaryComposite* buildBinaryComposite(const std::string &fileName);
 // Generic data types
 SgAsmIntegerType* buildTypeU(size_t nBits);             /**< Unsigned type of specified size. */
 SgAsmIntegerType* buildTypeI(size_t nBits);             /**< Signed type of specified size. */
-SgAsmIntegerType* buildTypeU1();                        /**< 1-bit unsigned (Boolean) */
-SgAsmIntegerType* buildTypeU4();                        /**< 4-bit unsigned */
-SgAsmIntegerType* buildTypeU8();                        /**< 8-bit unsigned */
-SgAsmIntegerType* buildTypeU16();                       /**< 16-bit unsigned */
-SgAsmIntegerType* buildTypeU32();                       /**< 32-bit unsigned */
-SgAsmIntegerType* buildTypeU64();                       /**< 64-bit unsigned */
-SgAsmIntegerType* buildTypeI8();                        /**< 8-bit signed */
-SgAsmIntegerType* buildTypeI16();                       /**< 16-bit signed */
-SgAsmIntegerType* buildTypeI32();                       /**< 32-bit signed */
-SgAsmIntegerType* buildTypeI64();                       /**< 64-bit signed */
-SgAsmFloatType* buildIeee754Binary32();                 /**< 32-bit IEEE-754 floating-point */
-SgAsmFloatType* buildIeee754Binary64();                 /**< 64-bit IEEE-754 floating-point */
-SgAsmFloatType* buildIeee754Binary80();                 /**< 80-bit IEEE-754 floating-point (as in x86) */
-SgAsmVectorType* buildTypeVector(size_t, SgAsmType*);   /**< Fixed-size, packed array */
+SgAsmIntegerType* buildTypeU1();                        /**< 1-bit unsigned (Boolean). */
+SgAsmIntegerType* buildTypeU4();                        /**< 4-bit unsigned. */
+SgAsmIntegerType* buildTypeU8();                        /**< 8-bit unsigned. */
+SgAsmIntegerType* buildTypeU16();                       /**< 16-bit unsigned. */
+SgAsmIntegerType* buildTypeU32();                       /**< 32-bit unsigned. */
+SgAsmIntegerType* buildTypeU64();                       /**< 64-bit unsigned. */
+SgAsmIntegerType* buildTypeI8();                        /**< 8-bit signed. */
+SgAsmIntegerType* buildTypeI16();                       /**< 16-bit signed. */
+SgAsmIntegerType* buildTypeI32();                       /**< 32-bit signed. */
+SgAsmIntegerType* buildTypeI64();                       /**< 64-bit signed. */
+SgAsmFloatType* buildIeee754Binary16();                  /**< 16-bit IEEE-754 floating-point. */
+SgAsmFloatType* buildIeee754Binary32();                 /**< 32-bit IEEE-754 floating-point. */
+SgAsmFloatType* buildIeee754Binary64();                 /**< 64-bit IEEE-754 floating-point. */
+SgAsmFloatType* buildIeee754Binary80();                 /**< 80-bit IEEE-754 floating-point (as in x86). */
+SgAsmFloatType* buildIeee754Binary128();                /**< 128-bit IEEE-754 floating-point. */
+SgAsmVectorType* buildTypeVector(size_t, SgAsmType*);   /**< Fixed-size, packed array. */
 
 // Architecture-specific data types
-SgAsmIntegerType *buildTypeX86Byte();                   /**< 8-bit unsigned */
-SgAsmIntegerType *buildTypeX86Word();                   /**< 16-bit unsigned */
-SgAsmIntegerType *buildTypeX86DoubleWord();             /**< 32-bit unsigned */
-SgAsmIntegerType *buildTypeX86QuadWord();               /**< 64-bit unsigned */
-SgAsmFloatType *buildTypeX86Float32();                  /**< 32-bit IEEE-754 floating-point */
-SgAsmFloatType *buildTypeX86Float64();                  /**< 64-bit IEEE-754 floating-point */
-SgAsmFloatType *buildTypeX86Float80();                  /**< 80-bit IEEE-754 floating-point */
-SgAsmVectorType *buildTypeX86DoubleQuadWord();          /**< Vector of two 64-bit unsigned integers */
-SgAsmFloatType *buildTypeM68kFloat96();                 /**< Motorola M68k 96-bit float (16-bits are always zero) */
+SgAsmIntegerType *buildTypeX86Byte();                   /**< 8-bit unsigned. */
+SgAsmIntegerType *buildTypeX86Word();                   /**< 16-bit unsigned. */
+SgAsmIntegerType *buildTypeX86DoubleWord();             /**< 32-bit unsigned. */
+SgAsmIntegerType *buildTypeX86QuadWord();               /**< 64-bit unsigned. */
+SgAsmFloatType *buildTypeX86Float32();                  /**< 32-bit IEEE-754 floating-point. */
+SgAsmFloatType *buildTypeX86Float64();                  /**< 64-bit IEEE-754 floating-point. */
+SgAsmFloatType *buildTypeX86Float80();                  /**< 80-bit IEEE-754 floating-point. */
+SgAsmVectorType *buildTypeX86DoubleQuadWord();          /**< Vector of two 64-bit unsigned integers. */
+SgAsmFloatType *buildTypeM68kFloat96();                 /**< Motorola M68k 96-bit float (16-bits are always zero). */
+SgAsmFloatType *buildTypeM68kFloat80();                 /**< Motorola M68k 96-bit float w/out 16-bit constant zero field. */
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Generic value builders
@@ -105,12 +110,15 @@ SgAsmBinarySubtractPreupdate* buildSubtractPreupdateExpression(SgAsmExpression *
 SgAsmBinaryAddPostupdate* buildAddPostupdateExpression(SgAsmExpression *lhs, SgAsmExpression *rhs, SgAsmType *type=NULL);
 SgAsmBinarySubtractPostupdate* buildSubtractPostupdateExpression(SgAsmExpression *lhs, SgAsmExpression *rhs, SgAsmType *type=NULL);
 SgAsmBinaryMultiply* buildMultiplyExpression(SgAsmExpression *lhs, SgAsmExpression *rhs, SgAsmType *type=NULL);
+SgAsmBinaryMsl* buildMslExpression(SgAsmExpression *lhs, SgAsmExpression *rhs, SgAsmType *type=NULL);
 SgAsmBinaryLsl* buildLslExpression(SgAsmExpression *lhs, SgAsmExpression *rhs, SgAsmType *type=NULL);
 SgAsmBinaryLsr* buildLsrExpression(SgAsmExpression *lhs, SgAsmExpression *rhs, SgAsmType *type=NULL);
 SgAsmBinaryAsr* buildAsrExpression(SgAsmExpression *lhs, SgAsmExpression *rhs, SgAsmType *type=NULL);
 SgAsmBinaryRor* buildRorExpression(SgAsmExpression *lhs, SgAsmExpression *rhs, SgAsmType *type=NULL);
 SgAsmUnaryRrx* buildRrxExpression(SgAsmExpression *lhs, SgAsmType *type=NULL);
-SgAsmUnaryArmSpecialRegisterList *buildArmSpecialRegisterList(SgAsmExpression *lhs);
+SgAsmUnaryTruncate* buildTruncateExpression(SgAsmExpression*, SgAsmType*);
+SgAsmUnarySignedExtend* buildSignedExtendExpression(SgAsmExpression*, SgAsmType*);
+SgAsmUnaryUnsignedExtend* buildUnsignedExtendExpression(SgAsmExpression*, SgAsmType*);
 SgAsmExprListExp* buildExprListExpression();
 void appendExpression(SgAsmExprListExp*, SgAsmExpression*);
 SgAsmMemoryReferenceExpression* buildMemoryReferenceExpression(SgAsmExpression *addr, SgAsmExpression *segment=NULL,
@@ -152,4 +160,5 @@ SgAsmBlock* buildDataBlock(SgAsmStaticData*);
 } // namespace
 } // namespace
 
+#endif
 #endif

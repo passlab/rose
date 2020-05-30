@@ -1,4 +1,7 @@
+#include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
 #include "sage3basic.h"
+
 #include "AsmUnparser_compat.h"
 
 #include <BinaryDemangler.h>
@@ -92,7 +95,7 @@ BasicBlockSizeLimiter::operator()(bool chain, const Args &args) {
         if (mlog[DEBUG]) {
             mlog[DEBUG] <<"BasicBlockSizeLimiter triggered (max " <<StringUtility::plural(maxInsns_, "instructions") <<"):\n";
             BOOST_FOREACH (SgAsmInstruction *insn, args.bblock->instructions())
-                mlog[DEBUG] <<"        " <<unparseInstructionWithAddress(insn) <<"\n";
+                mlog[DEBUG] <<"        " <<args.partitioner.unparse(insn) <<"\n";
         }
     }
     return chain;
@@ -196,7 +199,7 @@ InstructionLister::operator()(bool chain, const AttachedBasicBlock &args) {
                 } else if (insn->get_address() < va) {
                     label = "-" + numberToString(va-insn->get_address());
                 }
-                debug <<"    " <<std::setw(6) <<label <<" " <<unparseInstructionWithAddress(insn) <<"\n";
+                debug <<"    " <<std::setw(6) <<label <<" " <<args.partitioner->unparse(insn) <<"\n";
                 va = insn->get_address() + insn->get_size();
             }
         }
@@ -1184,3 +1187,5 @@ nameNoopFunctions(const Partitioner &partitioner) {
 } // namespace
 } // namespace
 } // namespace
+
+#endif

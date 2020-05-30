@@ -1,4 +1,4 @@
-
+#include <rosePublicConfig.h>
 #include "ROSETTA_macros.h"
 #include "grammar.h"
 #include "AstNodeClass.h"
@@ -371,8 +371,10 @@ Grammar::setUpNodes ()
      AstNodeClass & Symbol  = *lookupTerminal(terminalList, "Symbol");
      AstNodeClass & Support = *lookupTerminal(terminalList, "Support");
 
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
   // DQ (3/14/2007): Added IR support for binaries
      AstNodeClass & AsmNode = *lookupTerminal(terminalList, "AsmNode");
+#endif
 
   // printf ("nonTerminalList.size() = %" PRIuPTR " \n",nonTerminalList.size());
 
@@ -385,7 +387,11 @@ Grammar::setUpNodes ()
   // NEW_NONTERMINAL_MACRO (Node, Support | Type | LocatedNode | Symbol | AsmNode, "Node", "NodeTag", false );
   // NEW_NONTERMINAL_MACRO (Node, Type | Symbol | LocatedNode | Support, "Node", "NodeTag" );
   // NEW_NONTERMINAL_MACRO (Node, Support | Type | LocatedNode | Symbol | AsmNode | Aterm, "Node", "NodeTag", false );
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
      NEW_NONTERMINAL_MACRO (Node, Support | Type | LocatedNode | Symbol | AsmNode, "Node", "NodeTag", false );
+#else
+     NEW_NONTERMINAL_MACRO (Node, Support | Type | LocatedNode | Symbol          , "Node", "NodeTag", false );
+#endif
 
   // ***********************************************************************
   // ***********************************************************************

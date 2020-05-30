@@ -1,7 +1,9 @@
+#include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
 #include "sage3basic.h"
+#include "DisassemblerM68k.h"
 
 #include "Diagnostics.h"
-#include "DisassemblerM68k.h"
 #include "integerOps.h"
 #include "stringify.h"
 #include "SageBuilderAsm.h"
@@ -599,21 +601,23 @@ DisassemblerM68k::makeMacAccumulatorRegister(unsigned accumIndex)
 SgAsmRegisterReferenceExpression *
 DisassemblerM68k::makeFPRegister(unsigned regnum)
 {
-    size_t registerNBits = 0;
     M68kDataFormat fmt = floatingFormatForFamily(family);
+    SgAsmType *type = NULL;
     switch (fmt) {
         case m68k_fmt_f64:
-            registerNBits = 64;
+            type = makeType(fmt);
             break;
         case m68k_fmt_f96:
-            registerNBits = 80;                         // 16-bits for X format are always zero
+            // The Motorola 68xxx 96-bit "extended real" type has 16 bits of zeros smack in the middle. The floating-point
+            // registers don't store the zeros and are therefore only 80 bits wide.
+            type = SageBuilderAsm::buildTypeM68kFloat80();
             break;
         default:
             ASSERT_not_reachable("invalid default floating-point format: " + stringifyBinaryAnalysisM68kDataFormat(fmt));
     }
-    RegisterDescriptor desc(m68k_regclass_fpr, regnum, 0, registerNBits);
+    RegisterDescriptor desc(m68k_regclass_fpr, regnum, 0, type->get_nBits());
     SgAsmRegisterReferenceExpression *expr = new SgAsmDirectRegisterExpression(desc);
-    expr->set_type(makeType(fmt));
+    expr->set_type(type);
     return expr;
 }
 
@@ -2026,7 +2030,8 @@ struct M68k_divide: M68k {
         SgAsmExpression *dq = d->makeDataRegister(extract<12, 14>(d->instructionWord(1)), m68k_fmt_i32);
         if (extract<12, 14>(d->instructionWord(1)) == extract<0, 2>(d->instructionWord(1))) {
             // first form, 32-bit dividend, storing only the quotient
-            ASSERT_require((0==extract<10, 10>(d->instructionWord(1))));
+            if (extract<10, 10>(d->instructionWord(1)))
+                return NULL;
             M68kInstructionKind kind = extract<11, 11>(d->instructionWord(1)) ? m68k_divs : m68k_divu;
             return d->makeInstruction(kind, stringifyBinaryAnalysisM68kInstructionKind(kind, "m68k_")+".l", ea, dq);
         } else if (extract<10, 10>(d->instructionWord(1))) {
@@ -4844,8 +4849,8 @@ DisassemblerM68k::init()
         regdict = RegisterDictionary::dictionary_m68000();
     }
     registerDictionary(regdict);
-    REG_IP = *registerDictionary()->lookup("pc");
-    REG_SP = *registerDictionary()->lookup("a7");
+    REG_IP = registerDictionary()->findOrThrow("pc");
+    REG_SP = registerDictionary()->findOrThrow("a7");
 
     p_proto_dispatcher = InstructionSemantics2::DispatcherM68k::instance();
     p_proto_dispatcher->addressWidth(32);
@@ -5071,4 +5076,6 @@ DisassemblerM68k::init()
 
 #ifdef ROSE_HAVE_BOOST_SERIALIZATION_LIB
 BOOST_CLASS_EXPORT_IMPLEMENT(Rose::BinaryAnalysis::DisassemblerM68k);
+#endif
+
 #endif

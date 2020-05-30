@@ -1,16 +1,13 @@
+#include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
 #include "sage3basic.h"
-
-// DQ (10/14/2010): This should only be included by source files that require it.
-// This fixed a reported bug which caused conflicts with autoconf macros (e.g. PACKAGE_BUGREPORT).
-// Interestingly it must be at the top of the list of include files.
-#include "rose_config.h"
+#include "DisassemblerX86.h"
 
 #include "Assembler.h"
 #include "AssemblerX86.h"
 #include "AsmUnparser_compat.h"
 #include "Disassembler.h"
 #include "SageBuilderAsm.h"
-#include "DisassemblerX86.h"
 #include "integerOps.h"
 #include "stringify.h"
 #include "DispatcherX86.h"
@@ -87,20 +84,20 @@ DisassemblerX86::init(size_t wordsize)
             // codes.
             regdict = RegisterDictionary::dictionary_i386_387();
 #endif
-            REG_IP = *regdict->lookup("ip");
-            REG_SP = *regdict->lookup("sp");
-            REG_SS = *regdict->lookup("ss");
-            REG_SF = *regdict->lookup("bp");
+            REG_IP = regdict->findOrThrow("ip");
+            REG_SP = regdict->findOrThrow("sp");
+            REG_SS = regdict->findOrThrow("ss");
+            REG_SF = regdict->findOrThrow("bp");
             break;
         case 4:
             name("i386");
             addrWidth = 32;
             insnSize = x86_insnsize_32;
             regdict = RegisterDictionary::dictionary_pentium4();
-            REG_IP = *regdict->lookup("eip");
-            REG_SP = *regdict->lookup("esp");
-            REG_SS = *regdict->lookup("ss");
-            REG_SF = *regdict->lookup("ebp");
+            REG_IP = regdict->findOrThrow("eip");
+            REG_SP = regdict->findOrThrow("esp");
+            REG_SS = regdict->findOrThrow("ss");
+            REG_SF = regdict->findOrThrow("ebp");
             callingConventions(CallingConvention::dictionaryX86());
             break;
         case 8:
@@ -108,10 +105,10 @@ DisassemblerX86::init(size_t wordsize)
             addrWidth = 64;
             insnSize = x86_insnsize_64;
             regdict = RegisterDictionary::dictionary_amd64();
-            REG_IP = *regdict->lookup("rip");
-            REG_SP = *regdict->lookup("rsp");
-            REG_SS = *regdict->lookup("ss");
-            REG_SF = *regdict->lookup("rbp");
+            REG_IP = regdict->findOrThrow("rip");
+            REG_SP = regdict->findOrThrow("rsp");
+            REG_SS = regdict->findOrThrow("ss");
+            REG_SF = regdict->findOrThrow("rbp");
             callingConventions(CallingConvention::dictionaryAmd64());
             break;
         default:
@@ -550,14 +547,14 @@ DisassemblerX86::makeRegister(uint8_t fullRegisterNumber, RegisterMode m, SgAsmT
 
     /* Now that we have a register name, obtain the register descriptor from the dictionary. */
     ASSERT_not_null(registerDictionary());
-    const RegisterDescriptor *rdesc = registerDictionary()->lookup(name);
+    const RegisterDescriptor rdesc = registerDictionary()->find(name);
     if (!rdesc)
         throw Exception("register \"" + name + "\" is not available for " + registerDictionary()->get_architecture_name());
 
     /* Construct the return value. */
     SgAsmRegisterReferenceExpression *rre = NULL;
     if (m != rmST) {
-        rre = new SgAsmDirectRegisterExpression(*rdesc);
+        rre = new SgAsmDirectRegisterExpression(rdesc);
     } else {
         // ST registers are different than most others. Starting with i387, the CPU has eight physical ST registers which
         // are treated as a circular stack, with ST(0) being the top of the stack.  See comments in
@@ -565,7 +562,7 @@ DisassemblerX86::makeRegister(uint8_t fullRegisterNumber, RegisterMode m, SgAsmT
         RegisterDescriptor stride(0, 1, 0, 0);          // increment the minor number
         RegisterDescriptor offset(x86_regclass_flags, x86_flags_fpstatus, 11, 3); // "fpstatus_top"
         size_t index = fullRegisterNumber;
-        rre = new SgAsmIndirectRegisterExpression(*rdesc, stride, offset, index, x86_st_nregs);
+        rre = new SgAsmIndirectRegisterExpression(rdesc, stride, offset, index, x86_st_nregs);
     }
     
     ASSERT_not_null(rre);
@@ -5951,4 +5948,6 @@ DisassemblerX86::decodeGroupP()
 
 #ifdef ROSE_HAVE_BOOST_SERIALIZATION_LIB
 BOOST_CLASS_EXPORT_IMPLEMENT(Rose::BinaryAnalysis::DisassemblerX86);
+#endif
+
 #endif

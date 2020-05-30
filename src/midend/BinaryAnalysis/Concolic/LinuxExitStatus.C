@@ -1,6 +1,6 @@
 #include <sage3basic.h>
-
 #include <BinaryConcolic.h>
+#ifdef ROSE_ENABLE_CONCOLIC_TESTING
 
 namespace Rose {
 namespace BinaryAnalysis {
@@ -15,7 +15,7 @@ LinuxExitStatus::Ptr
 LinuxExitStatus::create(const std::string databaseUrl, const boost::filesystem::path &executableName,
                         const std::vector<std::string> &arguments) {
     // Create the initial test case
-    std::string name = executableName.filename().native();
+    std::string name = executableName.filename().string();
     Specimen::Ptr specimen = Specimen::instance(executableName);
     TestCase::Ptr testCase0 = TestCase::instance(specimen);
     testCase0->name(name + " #0");
@@ -60,3 +60,4 @@ LinuxExitStatus::run() {
 } // namespace
 } // namespace
 
+#endif

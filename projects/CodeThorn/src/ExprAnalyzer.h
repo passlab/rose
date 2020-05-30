@@ -16,8 +16,8 @@
 #include "AbstractValue.h"
 #include "AstTerm.h"
 #include "ProgramLocationsReport.h"
-#include "SgTypeSizeMapping.h"
-#include "StructureAccessLookup.h"
+#include "TypeSizeMapping.h"
+#include "CodeThornOptions.h"
 
 using namespace std;
 
@@ -55,10 +55,10 @@ namespace CodeThorn {
     bool isBot() {return result.isBot();}
   };
   
-  enum InterpretationMode { IM_ABSTRACT, IM_CONCRETE };
+  enum InterpreterMode { IM_ABSTRACT, IM_CONCRETE };
   // ACCESS_ERROR is null pointer dereference is detected. ACCESS_NON_EXISTING if pointer is lattice bottom element.
   enum MemoryAccessBounds {ACCESS_ERROR,ACCESS_DEFINITELY_NP, ACCESS_DEFINITELY_INSIDE_BOUNDS, ACCESS_POTENTIALLY_OUTSIDE_BOUNDS, ACCESS_DEFINITELY_OUTSIDE_BOUNDS, ACCESS_NON_EXISTING};
-  enum AnalysisSelector { ANALYSIS_NULL_POINTER, ANALYSIS_OUT_OF_BOUNDS, ANALYSIS_UNINITIALIZED };
+  //  enum AnalysisSelector { ANALYSIS_NULL_POINTER, ANALYSIS_OUT_OF_BOUNDS, ANALYSIS_UNINITIALIZED, ANALYSIS_NUM };
   
   /*! 
    * \author Markus Schordan
@@ -67,7 +67,7 @@ namespace CodeThorn {
   //#define EXPR_VISITOR
   class ExprAnalyzer {
   public:
-    enum EvalMode { MODE_ADDRESS, MODE_VALUE };
+    enum EvalMode { MODE_ADDRESS, MODE_VALUE, MODE_EMPTY_STATE };
     ExprAnalyzer();
     void setAnalyzer(Analyzer* analyzer);
     //SingleEvalResult eval(SgNode* node,EState estate);
@@ -78,9 +78,11 @@ namespace CodeThorn {
     //! one of the variables was bound to top and branching constructs
     //! are inside the expression.
     list<SingleEvalResultConstInt> evaluateExpression(SgNode* node,EState estate, EvalMode mode=MODE_VALUE);
-    void setVariableIdMapping(VariableIdMapping* variableIdMapping);
-    void setSkipSelectedFunctionCalls(bool skip);
-    bool getSkipSelectedFunctionCalls();
+    //! uses AbstractValue::getVariableIdMapping()
+    AbstractValue evaluateExpressionWithEmptyState(SgExpression* expr);
+    void setVariableIdMapping(VariableIdMappingExtended* variableIdMapping);
+    void setSkipUnknownFunctionCalls(bool skip);
+    bool getSkipUnknownFunctionCalls();
     void setSkipArrayAccesses(bool skip);
     bool getSkipArrayAccesses();
     void setIgnoreUndefinedDereference(bool skip);
@@ -108,18 +110,17 @@ namespace CodeThorn {
 
     // record detected errors in programs
     ProgramLocationsReport getViolatingLocations(enum AnalysisSelector analysisSelector);
+    void recordDefinitiveViolatingLocation(enum AnalysisSelector analysisSelector, Label lab);
+    void recordPotentialViolatingLocation(enum AnalysisSelector analysisSelector, Label lab);
+    std::string analysisSelectorToString(AnalysisSelector sel);
     
+    // deprecated
     void recordDefinitiveNullPointerDereferenceLocation(Label lab);
     void recordPotentialNullPointerDereferenceLocation(Label lab);
-    ProgramLocationsReport getNullPointerDereferenceLocations();
-
     void recordDefinitiveOutOfBoundsAccessLocation(Label lab);
     void recordPotentialOutOfBoundsAccessLocation(Label lab);
-    ProgramLocationsReport getOutOfBoundsAccessLocations();
-
     void recordDefinitiveUninitializedAccessLocation(Label lab);
     void recordPotentialUninitializedAccessLocation(Label lab);
-    ProgramLocationsReport getUninitializedAccessLocations();
 
     bool definitiveErrorDetected();
     bool potentialErrorDetected();
@@ -127,32 +128,41 @@ namespace CodeThorn {
     void setOptionOutputWarnings(bool flag);
     bool getOptionOutputWarnings();
 
-    //! returns true if node is a VarRefExp and sets varName=name, otherwise false and varName="$".
-    static bool variable(SgNode* node,VariableName& varName);
     //! returns true if node is a VarRefExp and sets varId=id, otherwise false and varId=0.
-    bool variable(SgNode* node,VariableId& varId);
+    bool checkIfVariableAndDetermineVarId(SgNode* node,VariableId& varId); // only used by Analyzer
+
     list<SingleEvalResultConstInt> evalFunctionCallArguments(SgFunctionCallExp* funCall, EState estate);
     list<SingleEvalResultConstInt> evalFunctionCall(SgFunctionCallExp* node, EState estate);
     bool isLValueOp(SgNode* node);
-    void initializeStructureAccessLookup(SgProject* node);
     // requires StructureAccessLookup to be initialized.
     bool isStructMember(CodeThorn::VariableId varId);
     // checks if value is a null pointer. If it is 0 it records a null pointer violation at provided label.
     // returns true if execution may continue, false if execution definitely does not continue.
     bool checkAndRecordNullPointer(AbstractValue value, Label label);
 
-    enum InterpretationMode getInterpretationMode();
-    void setInterpretationMode(enum InterpretationMode);
+    enum InterpreterMode getInterpreterMode();
+    void setInterpreterMode(enum InterpreterMode);
+    std::string getInterpreterModeFileName();
+    void setInterpreterModeFileName(std::string);
 
-  protected:
-    static void initDiagnostics();
-    static Sawyer::Message::Facility logger;
-    AbstractValue constIntLatticeFromSgValueExp(SgValueExp* valueExp);
+    AbstractValue readFromMemoryLocation(Label lab, const PState* pstate, AbstractValue memLoc);
+    void writeToMemoryLocation(Label lab, PState* pstate, AbstractValue memLoc, AbstractValue newValue);
+    void writeUndefToMemoryLocation(PState* pstate, AbstractValue memLoc);
     
     //! This function turn a single result into a one-elment list with
     //! this one result.
     static list<SingleEvalResultConstInt> listify(SingleEvalResultConstInt res);
+
+    // utilify functions
+    int getMemoryRegionNumElements(CodeThorn::AbstractValue ptrToRegion);
+    int getMemoryRegionElementSize(CodeThorn::AbstractValue);
+
+  protected:
+    static void initDiagnostics();
+    static Sawyer::Message::Facility logger;
+    AbstractValue constIntLatticeFromSgValueExp(SgValueExp* valueExp, EvalMode mode);
     
+   
     // evaluation state
 #ifdef EXPR_VISITOR
     SingleEvalResultConstInt res;
@@ -300,7 +310,7 @@ namespace CodeThorn {
     list<SingleEvalResultConstInt> evalLValueExp(SgNode* node, EState estate, EvalMode mode=MODE_VALUE);
 
     list<SingleEvalResultConstInt> evalRValueVarRefExp(SgVarRefExp* node, EState estate, EvalMode mode=MODE_VALUE);
-    list<SingleEvalResultConstInt> evalValueExp(SgValueExp* node, EState estate);
+    list<SingleEvalResultConstInt> evalValueExp(SgValueExp* node, EState estate, EvalMode mode);
     
     // supported system functions
     list<SingleEvalResultConstInt> evalFunctionCallMalloc(SgFunctionCallExp* funCall, EState estate);
@@ -310,17 +320,13 @@ namespace CodeThorn {
 
     // supported functions to be executed (interpreter mode)
     list<SingleEvalResultConstInt> execFunctionCallPrintf(SgFunctionCallExp* funCall, EState estate);
-
-    // utilify functions
-    int getMemoryRegionNumElements(CodeThorn::AbstractValue ptrToRegion);
-    int getMemoryRegionElementSize(CodeThorn::AbstractValue);
+    list<SingleEvalResultConstInt> execFunctionCallScanf(SgFunctionCallExp* funCall, EState estate);
 
   private:
-    VariableIdMapping* _variableIdMapping=nullptr;
-    ProgramLocationsReport _nullPointerDereferenceLocations;
-    ProgramLocationsReport _outOfBoundsAccessLocations;
-    ProgramLocationsReport _uninitializedAccessLocations;
-   
+    void printLoggerWarning(EState& estate);
+    void initViolatingLocations();
+    VariableIdMappingExtended* _variableIdMapping=nullptr;
+    std::vector<ProgramLocationsReport> _violatingLocations;
     // Options
     bool _skipSelectedFunctionCalls=false;
     bool _skipArrayAccesses=false;
@@ -328,14 +334,15 @@ namespace CodeThorn {
     bool _svCompFunctionSemantics=false;
     bool _ignoreUndefinedDereference=false;
     bool _ignoreFunctionPointers=false;
-    Analyzer* _analyzer;
+    Analyzer* _analyzer=nullptr;
     bool _printDetectedViolations=false;
-    enum InterpretationMode _interpretationMode=IM_ABSTRACT;
+    enum InterpreterMode _interpreterMode=IM_ABSTRACT;
+    std::string _interpreterModeFileName;
     bool _optionOutputWarnings=false;
   public:
-    StructureAccessLookup structureAccessLookup;
   };
- 
+
+  
 } // end of namespace CodeThorn
 
 #endif

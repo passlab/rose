@@ -45,12 +45,14 @@
 
 #include "AST_FILE_IO.h"
 #include "merge.h"
+#include "load.h"
 // Note that this is required to define the Sg_File_Info_XXX symbols (need for file I/O)
 #include "Cxx_GrammarMemoryPoolSupport.h"
 
 // DQ (12/31/2005): This is OK if not declared in a header file
 using namespace std;
 using namespace Rose;
+using namespace Rose::Diagnostics;
 
 // global variable for turning on and off internal debugging
 int ROSE_DEBUG = 0;
@@ -316,6 +318,11 @@ std::string version_message()
      string backend_C_compiler_without_path   = BACKEND_C_COMPILER_NAME_WITH_PATH;
      string backend_C_compiler_with_path      = BACKEND_C_COMPILER_NAME_WITH_PATH;
      string backend_Cxx_compiler_version      = StringUtility::numberToString(BACKEND_CXX_COMPILER_MAJOR_VERSION_NUMBER) + "." + StringUtility::numberToString(BACKEND_CXX_COMPILER_MINOR_VERSION_NUMBER);
+#ifdef ROSE_BUILD_FORTRAN_LANGUAGE_SUPPORT
+     string backend_Fortran_compiler_with_path= BACKEND_FORTRAN_COMPILER_NAME_WITH_PATH;
+     string backend_Fortran_compiler_version  = StringUtility::numberToString(BACKEND_FORTRAN_COMPILER_MAJOR_VERSION_NUMBER) + "." + StringUtility::numberToString(BACKEND_FORTRAN_COMPILER_MINOR_VERSION_NUMBER);
+     string backend_Fortran_compiler_without_path = BACKEND_FORTRAN_COMPILER_NAME_WITHOUT_PATH;
+#endif
 
 #ifdef USE_CMAKE
      string build_tree_path                   = "CMake does not set: ROSE_COMPILE_TREE_PATH";
@@ -335,6 +342,10 @@ std::string version_message()
           "\n  --- using backend C compiler path (as specified at configure time): " + backend_C_compiler_with_path +
           "\n  --- using backend C++ compiler: " + backend_Cxx_compiler_without_path + " version: " + backend_Cxx_compiler_version +
           "\n  --- using backend C++ compiler path (as specified at configure time): " + backend_Cxx_compiler_with_path +
+#ifdef ROSE_BUILD_FORTRAN_LANGUAGE_SUPPORT
+          "\n  --- using backend Fortran compiler: " + backend_Fortran_compiler_without_path + " version: " + backend_Fortran_compiler_version +
+          "\n  --- using backend Fortran compiler path (as specified at configure time): " + backend_Fortran_compiler_with_path +
+#endif
           "\n  --- using original build tree path: " + build_tree_path +
           "\n  --- using instalation path: " + install_path +
           "\n  --- using GNU readline version: " + readlineVersionString() +
@@ -416,127 +427,6 @@ outputPredefinedMacros()
 #endif
    }
 
-namespace Rose {
-namespace AST {
-namespace IO {
-
-typedef std::map<int, std::string> f2n_t;
-typedef std::map<std::string, int> n2f_t;
-
-void mergeFileIDs(f2n_t const & f2n, n2f_t const & n2f, f2n_t & gf2n, n2f_t & gn2f, size_t start_node) {
-  std::map<int, int> idxmap;
-
-  for (f2n_t::const_iterator i = f2n.begin(); i != f2n.end(); i++) {
-    if (gn2f.count(i->second) == 0) {
-      int idx = (int)gn2f.size();
-
-      gn2f[i->second] = idx;
-      gf2n[idx] = i->second;
-      idxmap[i->first] = idx;
-    }
-  }
-  unsigned num_nodes = Sg_File_Info::numberOfNodes();
-  for (unsigned long i = start_node; i < num_nodes; i++) {
-    // Compute the postion of the indexed Sg_File_Info object in the memory pool.
-    unsigned long positionInPool = i % Sg_File_Info_CLASS_ALLOCATION_POOL_SIZE ;
-    unsigned long memoryBlock    = (i - positionInPool) / Sg_File_Info_CLASS_ALLOCATION_POOL_SIZE;
-
-    Sg_File_Info * fileInfo = &(((Sg_File_Info*)(Sg_File_Info_Memory_Block_List[memoryBlock]))[positionInPool]);
-    ROSE_ASSERT(fileInfo != NULL);
-
-    int oldFileId = fileInfo->get_file_id();
-    int newFileId = idxmap[oldFileId];
-
-    if (oldFileId >= 0 && oldFileId != newFileId) {
-      fileInfo->set_file_id(newFileId);
-    }
-  }
-}
-
-void mergeSymbolTable(SgSymbolTable * gst, SgSymbolTable * st) {
-  SgSymbolTable::BaseHashType* iht = st->get_table();
-  ROSE_ASSERT(iht != NULL);
-
-  SgSymbolTable::hash_iterator i = iht->begin();
-  while (i != iht->end()) {
-    SgSymbol * symbol = isSgSymbol((*i).second);
-    ROSE_ASSERT(symbol != NULL);
-
-    if (!gst->exists(i->first)) {
-      // This function in the local function type table is not in the global function type table, so add it.
-      gst->insert(i->first,i->second);
-    } else {
-      // These are redundant symbols, but likely something in the AST points to them so be careful.
-      // This function type is already in the global function type table, so there is nothing to do (later we can delete it to save space)
-    }
-    i++;
-  }
-}
-
-void mergeTypeSymbolTable(SgTypeTable * gtt, SgTypeTable * tt) {
-  SgSymbolTable * st  = tt->get_type_table();
-  SgSymbolTable * gst = gtt->get_type_table();
-
-  mergeSymbolTable(gst, st);
-}
-
-void mergeFunctionTypeSymbolTable(SgFunctionTypeTable * gftt, SgFunctionTypeTable * ftt) {
-  SgSymbolTable * fst  = ftt->get_function_type_table();
-  SgSymbolTable * gfst = gftt->get_function_type_table();
-
-  mergeSymbolTable(gfst, fst);
-}
-
-void append(SgProject * project, std::list<std::string> const & astfiles) {
-  size_t num_nodes = Sg_File_Info::numberOfNodes();
-
-  // Save shared (static) fields, TODO:
-  //   - global scope accross project
-  //   - name mangling caches?
-  SgTypeTable *         gtt = SgNode::get_globalTypeTable();
-  SgFunctionTypeTable * gftt = SgNode::get_globalFunctionTypeTable();
-  f2n_t gf2n = Sg_File_Info::get_fileidtoname_map();
-  n2f_t gn2f = Sg_File_Info::get_nametofileid_map();
-
-  std::list<std::string>::const_iterator astfile = astfiles.begin();
-  size_t cnt = 0;
-  while (astfile != astfiles.end()) {
-    // Note the postfix increment in the following two lines
-    AST_FILE_IO::readASTFromFile(*(astfile++));
-    AstData * ast = AST_FILE_IO::getAst(cnt++);
-
-    // Check that the root of the read AST is valid
-    SgProject * lproject = ast->getRootOfAst();
-    ROSE_ASSERT(lproject->get_freepointer() == AST_FileIO::IS_VALID_POINTER());
-
-    // Insert all files into main project
-    std::vector<SgFile *> const & files = lproject->get_files();
-    for (std::vector<SgFile *>::const_iterator it = files.begin(); it != files.end(); ++it) {
-      project->get_files().push_back(*it);
-    }
-
-    // Load shared (static) fields from the AST being read
-    AST_FILE_IO::setStaticDataOfAst(ast);
-
-    // Merge static fields
-    mergeTypeSymbolTable(gtt, SgNode::get_globalTypeTable());
-    mergeFunctionTypeSymbolTable(gftt, SgNode::get_globalFunctionTypeTable());
-    mergeFileIDs(Sg_File_Info::get_fileidtoname_map(), Sg_File_Info::get_nametofileid_map(), gf2n, gn2f, num_nodes);
-
-    num_nodes = Sg_File_Info::numberOfNodes();
-  }
-
-  // Restore shared (static) fields
-  SgNode::set_globalTypeTable(gtt);
-  SgNode::set_globalFunctionTypeTable(gftt);
-  Sg_File_Info::set_fileidtoname_map(gf2n);
-  Sg_File_Info::set_nametofileid_map(gn2f);
-}
-
-} // IO
-} // AST
-} // ROSE
-
 /*! \brief Call to frontend, processes commandline and generates a SgProject object.
 
     This function represents a simple interface to the use of ROSE as a library.
@@ -592,32 +482,19 @@ frontend (const std::vector<std::string>& argv, bool frontendConstantFolding )
      SgProject* project = new SgProject (argv2,frontendConstantFolding);
      ROSE_ASSERT (project != NULL);
 
-  // DQ (9/6/2005): I have abandoned this form or prelinking (AT&T C Front style).
-  // To be honest I find this level of technology within ROSE to be embarassing...
-  // We not handle prelinking by generating all required template instantiations
-  // as static functions.  A more global based prelinker will be built at some
-  // point and will likely utilize the SGLite database or some other auxiliary file
-  // mechansism.
-  // DQ (3/31/2004): If there are templates used then we need to modify the *.ti file build by EDG.
-  // buildTemplateInstantiationSupportFile ( project );
-
-  // DQ (4/16/2015): This is replaced with a better implementation.
-  // Make sure the isModified boolean is clear for all newly-parsed nodes.
-  // checkIsModifiedFlag(project);
-
   // DQ (1/27/2017): Comment this out so that we can generate the dot graph to debug symbol with null basis.
      unsetNodesMarkedAsModified(project);
-  // printf ("ERROR: In frontend(const std::vector<std::string>& argv): commented out unsetNodesMarkedAsModified() \n");
 
      std::list<std::string> const & astfiles = project->get_astfiles_in();
      if (astfiles.size() > 0) {
-       Rose::AST::IO::append(project, astfiles);
+       Rose::AST::load(project, astfiles);
+       ROSE_ASSERT(project->get_ast_merge());
      }
 
      if (project->get_ast_merge()) {
-       mergeAST(project, /* skipFrontendSpecificIRnodes = */false);
+       Rose::AST::merge(project);
      }
-   
+
   // Set the mode to be transformation, mostly for Fortran. Liao 8/1/2013
   // Removed semicolon at end of if conditional to allow it to have a body [Rasmussen 2019.01.29]
      if (SageBuilder::SourcePositionClassificationMode == SageBuilder::e_sourcePositionFrontendConstruction)
@@ -758,9 +635,13 @@ backend ( SgProject* project, UnparseFormatHelp *unparseFormatHelp, UnparseDeleg
 
      std::string const & astfile_out = project->get_astfile_out();
      if (astfile_out != "") {
+       std::list<std::string> empty_file_list;
+       project->set_astfiles_in(empty_file_list);
+       project->get_astfile_out() == "";
        AST_FILE_IO::reset();
        AST_FILE_IO::startUp(project);
        AST_FILE_IO::writeASTToFile(astfile_out);
+       AST_FILE_IO::resetValidAstAfterWriting();
      }
 
 #if 0
@@ -871,6 +752,11 @@ backend ( SgProject* project, UnparseFormatHelp *unparseFormatHelp, UnparseDeleg
                printf ("Link using the C language linker (when handling C programs) = %s \n",BACKEND_C_COMPILER_NAME_WITH_PATH);
             // finalCombinedExitStatus = project->link("gcc");
                finalCombinedExitStatus = project->link(BACKEND_C_COMPILER_NAME_WITH_PATH);
+             }
+            else if (project->get_Fortran_only() == true)
+             {
+               printf ("Link using the Fortran language linker (when handling Fortran programs) = %s \n",BACKEND_FORTRAN_COMPILER_NAME_WITH_PATH);
+               finalCombinedExitStatus = project->link(BACKEND_FORTRAN_COMPILER_NAME_WITH_PATH);
              }
             else
              {

@@ -1,5 +1,8 @@
+#include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
 #include <sage3basic.h>
 #include <BaseSemanticsSValue.h>
+
 #include <BaseSemanticsFormatter.h>
 
 namespace Rose {
@@ -25,7 +28,16 @@ SValue::print(std::ostream &stream) const {
     print(stream, fmt);
 }
 
+SValue::WithFormatter
+SValue::operator+(const std::string &linePrefix) {
+    static Formatter fmt;
+    fmt.set_line_prefix(linePrefix);
+    return with_format(fmt);
+}
+
 } // namespace
 } // namespace
 } // namespace
 } // namespace
+
+#endif

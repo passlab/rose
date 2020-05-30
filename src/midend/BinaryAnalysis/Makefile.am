@@ -7,7 +7,6 @@ AM_CPPFLAGS = -Winvalid-pch $(ROSE_INCLUDES) -I$(srcdir)/graph -I$(srcdir)/libra
 noinst_LTLIBRARIES = libbinaryMidend.la
 libbinaryMidend_la_DEPENDENCIES =
 
-if ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
 libbinaryMidend_la_SOURCES =					\
     AbstractLocation.C						\
     BinaryAstHash.C						\
@@ -31,6 +30,7 @@ libbinaryMidend_la_SOURCES =					\
     BinarySmtCommandLine.C					\
     BinarySmtSolver.C						\
     BinarySmtlibSolver.C					\
+    BinarySourceLocations.C					\
     BinaryStackDelta.C						\
     BinaryString.C						\
     BinarySymbolicExpr.C					\
@@ -38,10 +38,12 @@ libbinaryMidend_la_SOURCES =					\
     BinarySystemCall.C						\
     BinaryTaintedFlow.C						\
     BinaryToSource.C						\
+    BinaryVariables.C						\
     BinaryYicesSolver.C						\
     BinaryZ3Solver.C						\
     Concolic/ConcolicExecutor.C					\
     Concolic/Database.C						\
+    Concolic/Database2.C					\
     Concolic/ExecutionManager.C					\
     Concolic/LinuxExecutor.C					\
     Concolic/LinuxExitStatus.C					\
@@ -88,11 +90,6 @@ libbinaryMidend_la_SOURCES +=					\
     libraryIdentification/libraryIdentification.C
 endif
 
-else
-libbinaryMidend_la_SOURCES = dummyBinaryMidend.C
-endif
-
-
 pkginclude_HEADERS =					\
     AbstractLocation.h					\
     BinaryAnalysisUtils.h				\
@@ -119,6 +116,7 @@ pkginclude_HEADERS =					\
     BinarySmtCommandLine.h				\
     BinarySmtSolver.h					\
     BinarySmtlibSolver.h				\
+    BinarySourceLocations.h				\
     BinaryStackDelta.h					\
     BinaryStackVariable.h				\
     BinaryString.h					\
@@ -127,6 +125,7 @@ pkginclude_HEADERS =					\
     BinarySystemCall.h					\
     BinaryTaintedFlow.h					\
     BinaryToSource.h					\
+    BinaryVariables.h					\
     BinaryYicesSolver.h					\
     BinaryZ3Solver.h					\
     DwarfLineMapper.h					\

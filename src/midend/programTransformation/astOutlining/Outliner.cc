@@ -36,6 +36,7 @@ namespace Outliner {
   bool enable_debug=false; // 
   bool exclude_headers=false;
   bool use_dlopen=false; // Outlining the target to a separated file and calling it using a dlopen() scheme. It turns on useNewFile.
+  bool enable_template=false; // Outlining code blocks inside C++ templates
   std::string output_path=""; // default output path is the original file's directory
   std::vector<std::string> handles; //  abstract handles of outlining targets, given by command line option -rose:outline:abstract_handle for each
 
@@ -116,6 +117,10 @@ Outliner::generateFuncArgName (const SgStatement* stmt)
 Outliner::Result
 Outliner::outline (SgStatement* s)
 {
+#ifdef __linux__
+  if (enable_debug)  
+    cout<<"Entering "<< __PRETTY_FUNCTION__ <<endl;
+#endif
   string func_name = generateFuncName (s);
   return outline (s, func_name);
 }
@@ -185,6 +190,10 @@ Sawyer::CommandLine::SwitchGroup
 Outliner::commandLineSwitches() {
     using namespace Sawyer::CommandLine;
 
+#if 0
+    printf ("In Outliner::commandLineSwitches(): Processing the outliner output_path \n");
+#endif
+
     SwitchGroup switches("Outliner switches");
     switches.doc("These switches control ROSE's outliner. ");
     switches.name("rose:outline");
@@ -225,6 +234,10 @@ Outliner::commandLineSwitches() {
                     .intrinsicValue(true, use_dlopen)
                     .doc("Use @man{dlopen}(3) to find an outlined function saved into a new source file."));
 
+    switches.insert(Switch("enable_template")
+                    .intrinsicValue(true, enable_template)
+                    .doc("Enable outlining code blocks inside C++ templates."));
+
     switches.insert(Switch("abstract_handle")
                     .argument("handle", anyParser(handles))
                     .whichValue(SAVE_ALL)               // if switch appears more than once, save all values not just last
@@ -244,15 +257,34 @@ Outliner::commandLineSwitches() {
 //! Validate outliner settings. This should be called after outliner settings are adjusted (directly or by command-line
 //  parsing) and before the outliner is used to outline source code.
 void
-Outliner::validateSettings() {
+Outliner::validateSettings() 
+   {
+#if 0
+     printf ("In Outliner::validateSettings(): before building output_path directory: output_path = %s \n",output_path.c_str());
+#endif
+
     if (!output_path.empty()) {
         // remove trailing '/'
         while (output_path[output_path.size()-1]=='/')
             output_path.erase(output_path.end()-1);
         // Create such path if not exists
+
+#if 0
+        printf ("After erasing directoriies in output_path: output_path = %s \n",output_path.c_str());
+#endif
         bfs::path my_path(output_path);
         if (!bfs::exists(my_path))
+          {
+#if 0
+            printf ("Before bfs::create_directory(): my_path.string() = %s \n",my_path.string().c_str());
+#endif
             bfs::create_directory(my_path);
+#if 0
+            printf ("Exiting as a test! \n");
+            ROSE_ASSERT(false);
+#endif
+          }
+
         if (!bfs::is_directory(my_path)) {
             cerr<<"output_path:"<<output_path<<" is not a path!"<<endl;
             ROSE_ASSERT(false);
@@ -281,6 +313,10 @@ Outliner::validateSettings() {
 //! Set internal options based on command line options
 void Outliner::commandLineProcessing(std::vector<std::string> &argvList)
 {
+#if 0
+    printf ("In Outliner::commandLineProcessing(): Processing the outliner output_path \n");
+#endif
+
   if (CommandlineProcessing::isOption (argvList,"-rose:outline:","enable_debug",true))
   {
     cout<<"Enabling debugging mode for outlined functions..."<<endl;
@@ -347,7 +383,13 @@ void Outliner::commandLineProcessing(std::vector<std::string> &argvList)
   }
   //  else
   //    enable_classic = false;
-
+  if (CommandlineProcessing::isOption (argvList,"-rose:outline:","enable_template",true))
+  {
+    if (enable_debug)
+      cout<<"Enabling outlining code blocks inside C++ templates..."<<endl;
+    enable_template= true;
+  }
+ 
   if (CommandlineProcessing::isOption (argvList,"-rose:outline:","temp_variable",true))
   {
     if (enable_debug)
@@ -411,6 +453,7 @@ void Outliner::commandLineProcessing(std::vector<std::string> &argvList)
     cout<<"\t-rose:outline:exclude_headers                  do not include any headers in the new file for outlined functions"<<endl;
     cout<<"\t-rose:outline:use_dlopen                       use dlopen() to find the outlined functions saved in new files.It will turn on new_file and parameter_wrapper flags internally"<<endl;
     cout<<"\t-rose:outline:copy_orig_file                   used with dlopen(): single lib source file copied from the entire original input file. All generated outlined functions are appended to the lib source file"<<endl;
+    cout<<"\t-rose:outline:enable_template                  support outlining code blocks inside C++ templates (experimental)"<<endl;
     cout<<"\t-rose:outline:enable_debug                     run outliner in a debugging mode"<<endl;
     cout <<"---------------------------------------------------------------"<<endl;
   }
@@ -422,6 +465,10 @@ void Outliner::commandLineProcessing(std::vector<std::string> &argvList)
 SgBasicBlock *
 Outliner::preprocess (SgStatement* s)
 {
+#ifdef __linux__
+  if (enable_debug)  
+    cout<<"Entering "<< __PRETTY_FUNCTION__ <<endl;
+#endif
   // bool b = isOutlineable (s, enable_debug);
   bool b = isOutlineable (s, SgProject::get_verbose () >= 1);
   if (b!= true)

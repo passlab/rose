@@ -106,14 +106,16 @@ namespace SageInterface
 //! An internal counter for generating unique SgName
 ROSE_DLL_API extern int gensym_counter;
 
-// tps : 28 Oct 2008 - support for finding the main interpretation
- SgAsmInterpretation* getMainInterpretation(SgAsmGenericFile* file);
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
+//! Find the main interpretation.
+SgAsmInterpretation* getMainInterpretation(SgAsmGenericFile* file);
 
 //! Get the unsigned value of a disassembled constant.
 uint64_t getAsmConstant(SgAsmValueExpression* e);
 
 //! Get the signed value of a disassembled constant.
 int64_t getAsmSignedConstant(SgAsmValueExpression *e);
+#endif
 
 //! Function to add "C" style comment to statement.
  void addMessageStatement( SgStatement* stmt, std::string message );
@@ -128,47 +130,6 @@ int64_t getAsmSignedConstant(SgAsmValueExpression *e);
      void set_name (std::string n) {name = n;};
      std::string get_name () {return name;};
   };
-
-// DQ (3/2/2009): Added support for collectiong an merging the referenced symbols in the outlined
-// function into the list used to edit the outlined code subtree to fixup references (from symbols
-// in the original file to the symbols in the newer separate file).
-// typedef rose_hash::unordered_map<SgNode*, SgNode*, hash_nodeptr> ReplacementMapType;
-// void supplementReplacementSymbolMap ( const ReplacementMapTraversal::ReplacementMapType & inputReplacementMap );
-
-// CH (4/9/2010): Use boost::hash instead
-//#ifdef _MSC_VER
-#if 0
-inline size_t hash_value(SgNode* t) {return (size_t)t;}
-#endif
-
-#if 0
-// DQ (8/3/2015): We expect that this is not used and is generating a warnings so we 
-// can best fix it by removing it.
-struct hash_nodeptr
-   {
-// CH (4/9/2010): Use boost::hash instead
-//#ifndef _MSC_VER
-#if 0
-           //rose_hash::hash<char*> hasher;
-#endif
-     public:
-          size_t operator()(SgNode* node) const
-             {
-// CH (4/9/2010): Use boost::hash instead
-//#ifdef _MSC_VER
- #if 0
-                                  return (size_t) hash_value(node);
- #else
-                                  return (size_t) node;
- #endif
-                   }
-    };
-
-#ifndef SWIG
-// DQ (3/10/2013): This appears to be a problem for the SWIG interface (undefined reference at link-time).
-  void supplementReplacementSymbolMap ( rose_hash::unordered_map<SgNode*, SgNode*, hash_nodeptr> & inputReplacementMap );
-#endif
-#endif
 
  //------------------------------------------------------------------------
  //@{
@@ -664,6 +625,10 @@ SgStatement* lastStatementOfScopeWithTokenInfo (SgScopeStatement* scope, std::ma
   ROSE_DLL_API bool is_mixed_Fortran_and_C_language ();
   ROSE_DLL_API bool is_mixed_Fortran_and_Cxx_language ();
   ROSE_DLL_API bool is_mixed_Fortran_and_C_and_Cxx_language ();
+
+  ROSE_DLL_API bool is_language_case_insensitive ();
+  ROSE_DLL_API bool language_may_contain_nondeclarations_in_scope ();
+
 //@}
 
 //------------------------------------------------------------------------
@@ -761,10 +726,6 @@ PreprocessingInfo* attachComment(
    ROSE_DLL_API PreprocessingInfo* attachComment(SgLocatedNode* target, const std::string & content,
                PreprocessingInfo::RelativePositionType position=PreprocessingInfo::before,
                PreprocessingInfo::DirectiveType dtype= PreprocessingInfo::CpreprocessorUnknownDeclaration);
-
-// DQ (11/25/2009): Added matching support for adding comments to SgAsm nodes.
-// Build and attach comment
-// void attachComment(SgAsmStatement* target, const std::string & content );
 
 // DQ (7/20/2008): I am not clear were I should put this function, candidates include: SgLocatedNode or SgInterface
 //! Add a string to be unparsed to support code generation for back-end specific tools or compilers.
@@ -1417,7 +1378,12 @@ T* findDeclarationStatement(SgNode* root, std::string name, SgScopeStatement* sc
 template <typename NodeType>
 NodeType* getEnclosingNode(const SgNode* astNode, const bool includingSelf = false)
    {
+#define DEBUG_GET_ENCLOSING_NODE 0
+
 #if 1
+  // DQ (12/31/2019): This version does not detect a cycle that Robb's version detects in processing Cxx11_tests/test2016_23.C.
+  // This will have to be investigated seperately from the issue I am working on currently.
+
   // DQ (10/20/2012): This is the older version of this implementation.  Until I am sure that
   // the newer version (below) is what we want to use I will resolve this conflict by keeping
   // the previous version in place.
@@ -1440,11 +1406,33 @@ NodeType* getEnclosingNode(const SgNode* astNode, const bool includingSelf = fal
   // DQ (3/5/2012): Check for loops that will cause infinite loops.
      SgNode* previouslySeenParent = parent;
      bool foundCycle = false;
+     int counter = 0;
+
+#if DEBUG_GET_ENCLOSING_NODE
+     printf ("In getEnclosingNode(): previouslySeenParent = %p = %s \n",previouslySeenParent,previouslySeenParent->class_name().c_str());
+#endif
+
      while ( (foundCycle == false) && (parent != NULL) && (!dynamic_cast<const NodeType*>(parent)) )
         {
           ROSE_ASSERT(parent->get_parent() != parent);
-#if 0
-          printf ("In getEnclosingNode(): parent = %p = %s \n",parent,parent->class_name().c_str());
+
+#if DEBUG_GET_ENCLOSING_NODE
+          printf (" --- parent = %p = %s \n",parent,parent->class_name().c_str());
+          printf (" --- --- parent->get_parent() = %p = %s \n",parent->get_parent(),parent->get_parent()->class_name().c_str());
+#endif
+
+#if 1
+       // DQ (1/8/2020): ROSE-82 (on RZ) This limit needs to be larger and increasing it to 500 was enough 
+       // for a specific code with a long chain of if-then-else nesting, So to make this sufficent for more
+       // general code we have increased the lomit to 100,000.  Note that 50 was not enough for real code, 
+       // but was enough for our regression tests.
+       // DQ (12/30/2019): This is added to support detection of infinite loops over parent pointers.
+       // if (counter >= 500)
+          if (counter >= 100000)
+             {
+               printf ("Exiting: In getEnclosingNode(): loop limit exceeded: counter = %d \n",counter);
+               ROSE_ASSERT(false);
+             }
 #endif
           parent = parent->get_parent();
 
@@ -1454,9 +1442,11 @@ NodeType* getEnclosingNode(const SgNode* astNode, const bool includingSelf = fal
              {
                foundCycle = true;
              }
+          counter++;
+
         }
 
-#if 0
+#if DEBUG_GET_ENCLOSING_NODE
      printf ("previouslySeenParent = %p = %s \n",previouslySeenParent,previouslySeenParent->class_name().c_str());
 #endif
 
@@ -1521,7 +1511,7 @@ NodeType* getEnclosingNode(const SgNode* astNode, const bool includingSelf = fal
                SgDeclarationStatement* declarationStatement = isSgDeclarationStatement(parent);
                if (declarationStatement != NULL)
                   {
-#if 0
+#if DEBUG_GET_ENCLOSING_NODE
                     printf ("Found a SgDeclarationStatement \n");
 #endif
                     SgDeclarationStatement* definingDeclaration         = declarationStatement->get_definingDeclaration();
@@ -1573,8 +1563,23 @@ NodeType* getEnclosingNode(const SgNode* astNode, const bool includingSelf = fal
            if (NodeType *found = dynamic_cast<NodeType*>(node))
                return found;
 
-           // FIXME: Cycle detection could be moved elsewhere so we don't need to do it on every call. [RPM 2012-10-09]
-           ROSE_ASSERT(seen.insert(node).second);
+        // FIXME: Cycle detection could be moved elsewhere so we don't need to do it on every call. [RPM 2012-10-09]
+        // DQ (12/30/2019): Provide more detail in error message.
+           if (seen.insert(node).second == false)
+             {
+               printf ("Error: node is already in set and defines a cycle: node = %p = %s \n",node,node->class_name().c_str());
+               std::set<const SgNode*>::const_iterator i = seen.begin();
+               while (i != seen.end())
+                 {
+                   const SgNode* element = *i;
+                   printf (" --- seen element: element = %p = %s \n",element,element->class_name().c_str()); 
+                   i++;
+                 }
+
+               printf ("Exiting after error! \n");
+               ROSE_ASSERT(false);
+             }
+           // ROSE_ASSERT(seen.insert(node).second);
 
            // Traverse to parent (declaration statements are a special case)
            if (SgDeclarationStatement *declarationStatement = isSgDeclarationStatement(node)) {
@@ -1663,6 +1668,7 @@ NodeType* getEnclosingNode(const SgNode* astNode, const bool includingSelf = fal
   // ROSE_DLL_API std::list<SgClassType*> getClassTypeChainForDataMemberReference(SgVarRefExp* varRefExp);
   ROSE_DLL_API std::list<SgClassType*> getClassTypeChainForMemberReference(SgExpression* refExp);
 
+  ROSE_DLL_API std::set<SgNode*> getFrontendSpecificNodes();
 
   // DQ (2/17/2019): Display the shared nodes in the AST for debugging.
   ROSE_DLL_API void outputSharedNodes( SgNode* node );
@@ -2048,7 +2054,9 @@ ROSE_DLL_API void fixNamespaceDeclaration(SgNamespaceDeclarationStatement* struc
 ROSE_DLL_API void fixLabelStatement(SgLabelStatement* label_stmt, SgScopeStatement* scope);
 
 //! Set a numerical label for a Fortran statement. The statement should have a enclosing function definition already. SgLabelSymbol and SgLabelRefExp are created transparently as needed.
-ROSE_DLL_API void setFortranNumericLabel(SgStatement* stmt, int label_value);
+ROSE_DLL_API void setFortranNumericLabel(SgStatement* stmt, int label_value,
+                                         SgLabelSymbol::label_type_enum label_type=SgLabelSymbol::e_start_label_type,
+                                         SgScopeStatement* label_scope=NULL);
 
 //! Suggest next usable (non-conflicting) numeric label value for a Fortran function definition scope
 ROSE_DLL_API int  suggestNextNumericLabel(SgFunctionDefinition* func_def);

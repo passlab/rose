@@ -1,5 +1,6 @@
 #include "sage3basic.h"
 #include "ProgramAbstractionLayer.h"
+#include "ClassHierarchyGraph.h"
 #include "Normalization.h"
 
 #include <iostream>
@@ -14,13 +15,13 @@ CodeThorn::ProgramAbstractionLayer::~ProgramAbstractionLayer() {
   delete _cfanalyzer;
 }
 
-void CodeThorn::ProgramAbstractionLayer::setModeArrayElementVariableId(bool val) {
-  _modeArrayElementVariableId=val;
-}
+//void CodeThorn::ProgramAbstractionLayer::setModeArrayElementVariableId(bool val) {
+//  _modeArrayElementVariableId=val;
+//}
 
-bool CodeThorn::ProgramAbstractionLayer::getModeArrayElementVariableId() {
-  return _modeArrayElementVariableId;;
-}
+//bool CodeThorn::ProgramAbstractionLayer::getModeArrayElementVariableId() {
+//  return _modeArrayElementVariableId;;
+//}
 
 SgProject* CodeThorn::ProgramAbstractionLayer::getRoot() {
   return _root;
@@ -33,15 +34,41 @@ void CodeThorn::ProgramAbstractionLayer::initialize(SgProject* root) {
   lowering.setInliningOption(getInliningOption());
   lowering.normalizeAst(root,getNormalizationLevel());
   _variableIdMapping=new VariableIdMapping();
-  getVariableIdMapping()->setModeVariableIdForEachArrayElement(getModeArrayElementVariableId());
+  //getVariableIdMapping()->setModeVariableIdForEachArrayElement(getModeArrayElementVariableId());
   getVariableIdMapping()->computeVariableSymbolMapping(root);
   _labeler=new Labeler(root);
-  _functionIdMapping=new FunctionIdMapping();
-  getFunctionIdMapping()->computeFunctionSymbolMapping(root);
+  
+  _classHierarchy=new ClassHierarchyWrapper(root);
+  _cfanalyzer=new CFAnalysis(_labeler);
+  _functionIdMapping=nullptr; 
+  _functionCallMapping=nullptr; 
+  _functionCallMapping2=nullptr;
 
-  // PP (07/15/19) moved flow generation from DFAnalysisBase class
-  _cfanalyzer = new CFAnalysis(_labeler);
-
+  if (!SgNodeHelper::WITH_EXTENDED_NORMALIZED_CALL)
+  {
+    // a function resolution mode
+    _functionIdMapping = new FunctionIdMapping();
+    
+    getFunctionIdMapping()->computeFunctionSymbolMapping(root);
+    _cfanalyzer->setFunctionIdMapping(getFunctionIdMapping());
+    
+    // another function resolution mode
+    _functionCallMapping = new FunctionCallMapping();
+  
+    getFunctionCallMapping()->setClassHierarchy(getClassHierarchy());
+    getFunctionCallMapping()->computeFunctionCallMapping(root);
+    _cfanalyzer->setFunctionCallMapping(getFunctionCallMapping());
+  }
+  else
+  {
+    // PP (02/17/20) add class hierarchy and call mapping
+    _functionCallMapping2=new FunctionCallMapping2();
+    getFunctionCallMapping2()->setLabeler(_labeler);
+    getFunctionCallMapping2()->setClassHierarchy(getClassHierarchy());
+    getFunctionCallMapping2()->computeFunctionCallMapping(root);
+    _cfanalyzer->setFunctionCallMapping2(getFunctionCallMapping2());
+  }
+  
   //cout<< "DEBUG: mappingLabelToLabelProperty: "<<endl<<getLabeler()->toString()<<endl;
   cout << "INIT: Building CFG for each function."<<endl;
   _fwFlow = _cfanalyzer->flow(root);
@@ -81,6 +108,21 @@ CodeThorn::VariableIdMapping* CodeThorn::ProgramAbstractionLayer::getVariableIdM
 CodeThorn::FunctionIdMapping* CodeThorn::ProgramAbstractionLayer::getFunctionIdMapping(){
   ROSE_ASSERT(_functionIdMapping!=0);
   return _functionIdMapping;
+}
+
+CodeThorn::FunctionCallMapping* CodeThorn::ProgramAbstractionLayer::getFunctionCallMapping(){
+  ROSE_ASSERT(_functionCallMapping!=0);
+  return _functionCallMapping;
+}
+
+CodeThorn::FunctionCallMapping2* CodeThorn::ProgramAbstractionLayer::getFunctionCallMapping2(){
+  ROSE_ASSERT(_functionCallMapping2!=0);
+  return _functionCallMapping2;
+}
+
+ClassHierarchyWrapper* CodeThorn::ProgramAbstractionLayer::getClassHierarchy(){
+  ROSE_ASSERT(_classHierarchy!=0);
+  return _classHierarchy;
 }
 
 void CodeThorn::ProgramAbstractionLayer::setNormalizationLevel(unsigned int level) {

@@ -1,5 +1,8 @@
+#include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
 #include <sage3basic.h>
 #include <BaseSemanticsMemoryState.h>
+
 #include <BaseSemanticsFormatter.h>
 #include <BaseSemanticsMerger.h>
 #include <BaseSemanticsSValue.h>
@@ -52,8 +55,17 @@ MemoryState::print(std::ostream &stream, const std::string prefix) const {
     fmt.set_line_prefix(prefix);
     print(stream, fmt);
 }
+
+MemoryState::WithFormatter
+MemoryState::operator+(const std::string &linePrefix) {
+    static Formatter fmt;
+    fmt.set_line_prefix(linePrefix);
+    return with_format(fmt);
+}
     
 } // namespace
 } // namespace
 } // namespace
 } // namespace
+
+#endif

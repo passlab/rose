@@ -1,6 +1,8 @@
+#include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
 #include "sage3basic.h"
-
 #include "SageBuilderAsm.h"
+
 #include "InstructionEnumsX86.h"
 #include "BinaryLoader.h"
 
@@ -283,6 +285,24 @@ buildTypeI64() {
 }
 
 SgAsmFloatType*
+buildIeee754Binary16() {
+    static SgAsmFloatType *cached = NULL;
+    static SAWYER_THREAD_TRAITS::Mutex mutex;
+    SAWYER_THREAD_TRAITS::LockGuard lock(mutex);
+
+    if (!cached) {
+        SgAsmFloatType *fpType = new SgAsmFloatType(ByteOrder::ORDER_LSB, 16,
+                                                    SgAsmFloatType::BitRange::baseSize(0, 11), // significand
+                                                    SgAsmFloatType::BitRange::baseSize(11, 5), // exponent
+                                                    16,                                        // sign bit
+                                                    15,                                        // exponent bias
+                                                    SgAsmFloatType::ieeeFlags());
+        cached = SgAsmType::registerOrDelete(fpType);
+    }
+    return cached;
+}
+
+SgAsmFloatType*
 buildIeee754Binary32() {
     static SgAsmFloatType *cached = NULL;
     static SAWYER_THREAD_TRAITS::Mutex mutex;
@@ -294,7 +314,7 @@ buildIeee754Binary32() {
                                                     SgAsmFloatType::BitRange::baseSize(23, 8), // exponent
                                                     31,                                        // sign bit
                                                     127,                                       // exponent bias
-                                                    SgAsmFloatType::NORMALIZED_SIGNIFICAND|SgAsmFloatType::GRADUAL_UNDERFLOW);
+                                                    SgAsmFloatType::ieeeFlags());
         cached = SgAsmType::registerOrDelete(fpType);
     }
     return cached;
@@ -312,25 +332,25 @@ buildIeee754Binary64() {
                                                     SgAsmFloatType::BitRange::baseSize(52, 11), // exponent
                                                     63,                                         // sign bit
                                                     1023,                                       // exponent bias
-                                                    SgAsmFloatType::NORMALIZED_SIGNIFICAND|SgAsmFloatType::GRADUAL_UNDERFLOW);
+                                                    SgAsmFloatType::ieeeFlags());
         cached = SgAsmType::registerOrDelete(fpType);
     }
     return cached;
 }
 
 SgAsmFloatType*
-buildIeee754Binary80() {
+buildIeee754Binary128() {
     static SgAsmFloatType *cached = NULL;
     static SAWYER_THREAD_TRAITS::Mutex mutex;
     SAWYER_THREAD_TRAITS::LockGuard lock(mutex);
 
     if (!cached) {
-        SgAsmFloatType *fpType = new SgAsmFloatType(ByteOrder::ORDER_LSB, 80,
-                                                    SgAsmFloatType::BitRange::baseSize(0, 64),  // significand
-                                                    SgAsmFloatType::BitRange::baseSize(64, 15), // exponent
-                                                    79,                                         // sign bit
-                                                    16383,                                      // exponent bias
-                                                    SgAsmFloatType::NORMALIZED_SIGNIFICAND|SgAsmFloatType::GRADUAL_UNDERFLOW);
+        SgAsmFloatType *fpType = new SgAsmFloatType(ByteOrder::ORDER_LSB, 128,
+                                                    SgAsmFloatType::BitRange::baseSize(0, 112),  // significand
+                                                    SgAsmFloatType::BitRange::baseSize(112, 15), // exponent
+                                                    127,                                         // sign bit
+                                                    262143,                                      // exponent bias
+                                                    SgAsmFloatType::ieeeFlags());
         cached = SgAsmType::registerOrDelete(fpType);
     }
     return cached;
@@ -373,7 +393,21 @@ buildTypeX86Float64() {
 
 SgAsmFloatType*
 buildTypeX86Float80() {
-    return buildIeee754Binary80();
+    static SgAsmFloatType *cached = NULL;
+    static SAWYER_THREAD_TRAITS::Mutex mutex;
+    SAWYER_THREAD_TRAITS::LockGuard lock(mutex);
+
+    if (!cached) {
+        SgAsmFloatType *fpType = new SgAsmFloatType(ByteOrder::ORDER_LSB, 80,
+                                                    SgAsmFloatType::BitRange::baseSize(0, 64),  // significand
+                                                    SgAsmFloatType::BitRange::baseSize(64, 15), // exponent
+                                                    79,                                         // sign bit
+                                                    16383,                                      // exponent bias
+                                                    SgAsmFloatType::ieeeFlags()
+                                                        .clear(SgAsmFloatType::IMPLICIT_BIT_CONVENTION));
+        cached = SgAsmType::registerOrDelete(fpType);
+    }
+    return cached;
 }
 
 // M68k 96-bit "extended-precision real format"
@@ -385,12 +419,43 @@ buildTypeM68kFloat96() {
     SAWYER_THREAD_TRAITS::LockGuard lock(mutex);
 
     if (!cached) {
+        // From the Motorola 68000 documentation, "For all three [binary floating-point] precisions, a normalized mantissa is
+        // always in the range (1.0...2.0). The extended-precision data format represents the entire mantissa, including the
+        // explicit integer part bit. Single- and double-precision data formats represent only a fractional portion of the
+        // mantissa (the fraction) and always imply the integer part as one". The documentation states that for
+        // extended-precision types, the term "matissa" is equivalent to IEEE 754 "significand" since the integer part of the
+        // significand is always stored.
+        //
+        // A table subsequently describes that the significand is denormalized when the exponent field's bits are all clear,
+        // implying that gradual underflow capability is present.
         SgAsmFloatType *fpType = new SgAsmFloatType(ByteOrder::ORDER_LSB, 96,
-                                                    SgAsmFloatType::BitRange::baseSize(0, 64),  // significand
+                                                    SgAsmFloatType::BitRange::baseSize(0, 64),  // significand w/explicit integer bit
                                                     SgAsmFloatType::BitRange::baseSize(80, 15), // exponent
                                                     95,                                         // sign bit
-                                                    16383,                                      // exponent bias
-                                                    SgAsmFloatType::NORMALIZED_SIGNIFICAND|SgAsmFloatType::GRADUAL_UNDERFLOW);
+                                                    0x3fff,                                     // exponent bias
+                                                    SgAsmFloatType::ieeeFlags()
+                                                        .clear(SgAsmFloatType::IMPLICIT_BIT_CONVENTION));
+        cached = SgAsmType::registerOrDelete(fpType);
+    }
+    return cached;
+}
+
+// M68k 80-bit floating-point type. Same as the 96 bit "extended-precision real" type but without the 16 bits field that's
+// always zero. This is the type actually stored in the floating-point registers for Motorola (but not ColdFire) processors.
+SgAsmFloatType*
+buildTypeM68kFloat80() {
+    static SgAsmFloatType *cached = NULL;
+    static SAWYER_THREAD_TRAITS::Mutex mutex;
+    SAWYER_THREAD_TRAITS::LockGuard lock(mutex);
+
+    if (!cached) {
+        SgAsmFloatType *fpType = new SgAsmFloatType(ByteOrder::ORDER_LSB, 80,
+                                                    SgAsmFloatType::BitRange::baseSize(0, 64),  // significand w/explicit integer bit
+                                                    SgAsmFloatType::BitRange::baseSize(64, 15), // exponent
+                                                    79,                                         // sign bit
+                                                    0x3fff,                                     // exponent bias
+                                                    SgAsmFloatType::ieeeFlags()
+                                                        .clear(SgAsmFloatType::IMPLICIT_BIT_CONVENTION));
         cached = SgAsmType::registerOrDelete(fpType);
     }
     return cached;
@@ -560,6 +625,21 @@ buildLslExpression(SgAsmExpression *lhs, SgAsmExpression *rhs, SgAsmType *type) 
     return a;
 }
 
+SgAsmBinaryMsl*
+buildMslExpression(SgAsmExpression *lhs, SgAsmExpression *rhs, SgAsmType *type) {
+    SgAsmBinaryMsl *a = new SgAsmBinaryMsl(lhs, rhs);
+    lhs->set_parent(a);
+    rhs->set_parent(a);
+    if (type) {
+        a->set_type(type);
+    } else if (lhs->get_type()) {
+        a->set_type(lhs->get_type());
+    } else {
+        a->set_type(rhs->get_type());
+    }
+    return a;
+}
+
 SgAsmBinaryLsr*
 buildLsrExpression(SgAsmExpression *lhs, SgAsmExpression *rhs, SgAsmType *type) {
     SgAsmBinaryLsr *a = new SgAsmBinaryLsr(lhs, rhs);
@@ -617,11 +697,34 @@ buildRrxExpression(SgAsmExpression *lhs, SgAsmType *type) {
     return a;
 }
 
-SgAsmUnaryArmSpecialRegisterList*
-buildArmSpecialRegisterList(SgAsmExpression *lhs) {
-    SgAsmUnaryArmSpecialRegisterList *a = new SgAsmUnaryArmSpecialRegisterList(lhs);
-    lhs->set_parent(a);
-    return a;
+SgAsmUnaryTruncate*
+buildTruncateExpression(SgAsmExpression *arg, SgAsmType *type) {
+    ASSERT_not_null(arg);
+    ASSERT_not_null(type);
+    SgAsmUnaryTruncate *retval = new SgAsmUnaryTruncate(arg);
+    arg->set_parent(retval);
+    retval->set_type(type);
+    return retval;
+}
+
+SgAsmUnarySignedExtend*
+buildSignedExtendExpression(SgAsmExpression *arg, SgAsmType *type) {
+    ASSERT_not_null(arg);
+    ASSERT_not_null(type);
+    SgAsmUnarySignedExtend *retval = new SgAsmUnarySignedExtend(arg);
+    arg->set_parent(retval);
+    retval->set_type(type);
+    return retval;
+}
+
+SgAsmUnaryUnsignedExtend*
+buildUnsignedExtendExpression(SgAsmExpression *arg, SgAsmType *type) {
+    ASSERT_not_null(arg);
+    ASSERT_not_null(type);
+    SgAsmUnaryUnsignedExtend *retval = new SgAsmUnaryUnsignedExtend(arg);
+    arg->set_parent(retval);
+    retval->set_type(type);
+    return retval;
 }
 
 SgAsmRiscOperation*
@@ -730,3 +833,5 @@ buildFunction(rose_addr_t entryVa, const std::vector<SgAsmBlock*> &blocks) {
 
 } // namespace
 } // namespace
+
+#endif

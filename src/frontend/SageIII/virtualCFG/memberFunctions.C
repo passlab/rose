@@ -407,7 +407,7 @@ unsigned int
 SgStatement::cfgFindChildIndex(SgNode* n) {
     // Default -- overridden in some cases
     size_t idx = this->getChildIndex(n);
-    ROSE_ASSERT (idx != (size_t)(-1)); // Not found
+    ROSE_ASSERT (idx != Rose::INVALID_INDEX); // Not found
     return idx;
   }
 
@@ -1243,7 +1243,7 @@ SgVariableDeclaration::cfgIndexForEnd() const {
 unsigned int
 SgVariableDeclaration::cfgFindChildIndex(SgNode* n) {
     size_t idx = this->get_childIndex(n);
-    ROSE_ASSERT (idx != (size_t)(-1)); // Not found
+    ROSE_ASSERT (idx != Rose::INVALID_INDEX); // Not found
     ROSE_ASSERT (idx != 0); // Not found
     return idx - 1;
   }
@@ -2063,6 +2063,128 @@ std::vector<CFGEdge> SgGotoStatement::cfgInEdges(unsigned int idx) {
   }
   return result;
 }
+
+unsigned int
+SgAdaExitStmt::cfgIndexForEnd() const {
+  return isSgNullExpression(get_condition()) ? 1 : 2;
+}
+
+bool
+SgAdaExitStmt::cfgIsIndexInteresting(unsigned int) const
+{
+  // \pp what does interesting mean?
+  return false;
+}
+
+
+std::vector<CFGEdge> 
+SgAdaExitStmt::cfgOutEdges(unsigned int idx) {
+  std::vector<CFGEdge> result;
+  const bool           has_condition = !isSgNullExpression(get_condition()); 
+  unsigned int         caseIdx = idx;
+  
+  if (!has_condition) ++caseIdx;
+
+#if THIS_IS_AN_ADA_EXAMPLE  
+  x: loop   // one out edge 
+    exit x when i > 0; // two out edges 
+  end loop; // one out edge
+#endif /* THIS_IS_AN_ADA_EXAMPLE */ 
+  
+  switch (caseIdx) {
+    case 0: makeEdge(CFGNode(this, idx), this->get_condition()->cfgForBeginning(), result); break;
+    case 1: makeEdge(CFGNode(this, idx), getNodeJustAfterInContainer(this->get_loop()), result);
+            
+            // the following out edge could be optional depending if there is a condition or not; 
+            if (has_condition)
+              makeEdge(CFGNode(this, idx), getNodeJustAfterInContainer(this), result); break;
+    default: ROSE_ASSERT (!"Bad index for SgAdaExitStmt");
+  }
+  return result;
+}
+
+std::vector<CFGEdge> 
+SgAdaExitStmt::cfgInEdges(unsigned int idx) {
+  std::vector<CFGEdge> result;
+  
+  switch (idx) {
+    case 0: makeEdge(getNodeJustBeforeInContainer(this), CFGNode(this, idx), result); break;
+    case 1: makeEdge(this->get_condition()->cfgForEnd(), CFGNode(this, idx), result); break; 
+    default: ROSE_ASSERT (!"Bad index for SgAdaExitStmt");
+  }
+  return result;
+}
+
+bool
+SgAdaLoopStmt::cfgIsIndexInteresting(unsigned int) const
+{
+  return false;
+}
+
+bool
+SgAdaAcceptStmt::cfgIsIndexInteresting(unsigned int idx) const
+{
+  return (idx == 0);
+}
+
+unsigned int
+SgAdaLoopStmt::cfgIndexForEnd() const {
+  return 2; 
+}
+
+unsigned int
+SgAdaAcceptStmt::cfgIndexForEnd() const {
+  return 1; 
+}
+
+std::vector<CFGEdge> 
+SgAdaLoopStmt::cfgOutEdges(unsigned int idx) {
+  std::vector<CFGEdge> result;
+  
+  switch (idx) {
+    case 0: makeEdge(CFGNode(this, idx), this->get_body()->cfgForBeginning(), result); break;
+    case 1: makeEdge(CFGNode(this, idx), CFGNode(this, 0),                    result); break;
+    default: ROSE_ASSERT (!"Bad index for SgAdaExitStmt");
+  }
+  return result;
+}
+
+std::vector<CFGEdge> 
+SgAdaAcceptStmt::cfgOutEdges(unsigned int idx) {
+  std::vector<CFGEdge> result;
+  
+  switch (idx) {
+    case 0: makeEdge(CFGNode(this, idx), this->get_body()->cfgForBeginning(), result); break;
+    case 1: makeEdge(CFGNode(this, idx), getNodeJustBeforeInContainer(this),  result); break;
+    default: ROSE_ASSERT (!"Bad index for SgAdaAcceptStmt");
+  }
+  return result;
+}
+
+std::vector<CFGEdge> 
+SgAdaLoopStmt::cfgInEdges(unsigned int idx) {
+  std::vector<CFGEdge> result;
+  
+  switch (idx) {
+    case 0: makeEdge(getNodeJustBeforeInContainer(this), CFGNode(this, idx), result); break;
+    case 1: makeEdge(this->get_body()->cfgForEnd(),      CFGNode(this, idx), result); break; 
+    default: ROSE_ASSERT (!"Bad index for SgAdaLoopStmt");
+  }
+  return result;
+}
+
+std::vector<CFGEdge> 
+SgAdaAcceptStmt::cfgInEdges(unsigned int idx) {
+  std::vector<CFGEdge> result;
+  
+  switch (idx) {
+    case 0: makeEdge(getNodeJustBeforeInContainer(this), CFGNode(this, idx), result); break;
+    case 1: makeEdge(this->get_body()->cfgForEnd(),      CFGNode(this, idx), result); break; 
+    default: ROSE_ASSERT (!"Bad index for SgAdaAcceptStmt");
+  }
+  return result;
+}
+
 
 unsigned int
 SgAsmStmt::cfgIndexForEnd() const {
@@ -3523,7 +3645,7 @@ SgExpression::cfgFindChildIndex(SgNode* n) {
 
     // Default -- overridden in some cases
     size_t idx = this->get_childIndex(n);
-    ROSE_ASSERT (idx != (size_t)(-1)); // Not found
+    ROSE_ASSERT (idx != Rose::INVALID_INDEX); // Not found
     return idx;
   }
 

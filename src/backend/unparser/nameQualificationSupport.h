@@ -155,7 +155,7 @@ class NameQualificationTraversal : public AstTopDownBottomUpProcessing<NameQuali
 
      public:
        // DQ (3/24/2016): Adding Robb's meageage mechanism (data member and function).
-          static Sawyer::Message::Facility mlog;
+//        static Sawyer::Message::Facility mlog;
           static void initDiagnostics();
 
      public:
@@ -219,6 +219,9 @@ class NameQualificationTraversal : public AstTopDownBottomUpProcessing<NameQuali
           void setNameQualification ( SgUsingDirectiveStatement* usingDirective, SgDeclarationStatement* declaration, int amountOfNameQualificationRequired );
           void setNameQualification ( SgFunctionRefExp* functionRefExp, SgFunctionDeclaration* functionDeclaration, int amountOfNameQualificationRequired );
           void setNameQualification ( SgMemberFunctionRefExp* functionRefExp, SgMemberFunctionDeclaration* functionDeclaration, int amountOfNameQualificationRequired );
+
+       // DQ (1/18/2020): Adding name qualification support for SgPsuedoDestructorRefExp.
+          void setNameQualification ( SgPseudoDestructorRefExp* psuedoDestructorRefExp, SgDeclarationStatement* declarationStatement, int amountOfNameQualificationRequired);
 
        // DQ (6/4/2011): This handles the case of both the declaration being a SgMemberFunctionDeclaration and a SgClassDeclaration.
        // void setNameQualification ( SgConstructorInitializer* constructorInitializer, SgMemberFunctionDeclaration* functionDeclaration, int amountOfNameQualificationRequired);

@@ -1,3 +1,5 @@
+#include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
 #include <sage3basic.h>
 #include <BaseSemanticsRiscOperators.h>
 
@@ -465,7 +467,16 @@ RiscOperators::print(std::ostream &stream, Formatter &fmt) const {
     currentState_->print(stream, fmt);
 }
 
+RiscOperators::WithFormatter
+RiscOperators::operator+(const std::string &linePrefix) {
+    static Formatter fmt;
+    fmt.set_line_prefix(linePrefix);
+    return with_format(fmt);
+}
+
 } // namespace
 } // namespace
 } // namespace
 } // namespace
+
+#endif

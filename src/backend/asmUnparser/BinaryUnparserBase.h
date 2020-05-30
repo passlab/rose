@@ -1,6 +1,9 @@
 #ifndef ROSE_BinaryAnalysis_UnparserBase_H
 #define ROSE_BinaryAnalysis_UnparserBase_H
 
+#include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
+
 #include <BinaryEdgeArrows.h>
 #include <BinaryReachability.h>
 #include <BinaryUnparser.h>
@@ -427,6 +430,7 @@ public:
     virtual void emitFunctionBody(std::ostream&, const Partitioner2::FunctionPtr&, State&) const;
     virtual void emitFunctionEpilogue(std::ostream&, const Partitioner2::FunctionPtr&, State&) const;
 
+    virtual void emitFunctionSourceLocation(std::ostream&, const Partitioner2::FunctionPtr&, State&) const;
     virtual void emitFunctionReasons(std::ostream&, const Partitioner2::FunctionPtr&, State&) const;
     virtual void emitFunctionCallers(std::ostream&, const Partitioner2::FunctionPtr&, State&) const;
     virtual void emitFunctionCallees(std::ostream&, const Partitioner2::FunctionPtr&, State&) const;
@@ -436,6 +440,7 @@ public:
     virtual void emitFunctionNoopAnalysis(std::ostream&, const Partitioner2::FunctionPtr&, State&) const;
     virtual void emitFunctionMayReturn(std::ostream&, const Partitioner2::FunctionPtr&, State&) const;
 
+    virtual void emitDataBlockSourceLocation(std::ostream&, const Partitioner2::DataBlockPtr&, State&) const;
     virtual void emitDataBlock(std::ostream&, const Partitioner2::DataBlockPtr&, State&) const;
     virtual void emitDataBlockPrologue(std::ostream&, const Partitioner2::DataBlockPtr&, State&) const;
     virtual void emitDataBlockBody(std::ostream&, const Partitioner2::DataBlockPtr&, State&) const;
@@ -446,6 +451,7 @@ public:
     virtual void emitBasicBlockBody(std::ostream&, const Partitioner2::BasicBlockPtr&, State&) const;
     virtual void emitBasicBlockEpilogue(std::ostream&, const Partitioner2::BasicBlockPtr&, State&) const;
 
+    virtual void emitBasicBlockSourceLocation(std::ostream&, const Partitioner2::BasicBlockPtr&, State&) const;
     virtual void emitBasicBlockComment(std::ostream&, const Partitioner2::BasicBlockPtr&, State&) const;
     virtual void emitBasicBlockSharing(std::ostream&, const Partitioner2::BasicBlockPtr&, State&) const;
     virtual void emitBasicBlockPredecessors(std::ostream&, const Partitioner2::BasicBlockPtr&, State&) const;
@@ -574,4 +580,5 @@ public:
 } // namespace
 } // namespace
 
+#endif
 #endif

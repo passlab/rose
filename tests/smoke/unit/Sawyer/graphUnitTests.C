@@ -20,7 +20,7 @@ std::ostream& operator<<(std::ostream &o, const Sawyer::Container::Graph<V, E> &
     typedef const typename Sawyer::Container::Graph<V, E> Graph;
     typedef typename Graph::ConstVertexIterator VertexIterator;
     typedef typename Graph::ConstEdgeIterator EdgeIterator;
-    typedef typename Graph::Vertex Vertex;
+    //typedef typename Graph::Vertex Vertex;
     typedef typename Graph::Edge Edge;
 
     o <<"    vertices:\n";
@@ -361,7 +361,7 @@ template<class Graph>
 void erase_vertex() {
     std::cout <<"erase vertices with edges:\n";
     typedef typename Graph::VertexIterator Vertex;
-    typedef typename Graph::EdgeIterator Edge;
+    //typedef typename Graph::EdgeIterator Edge;
 
     Graph graph;
     Vertex v0 = graph.insertVertex("vine");
@@ -421,7 +421,7 @@ template<class Graph>
 void copy_ctor() {
     std::cout <<"copy constructor:\n";
     typedef typename Graph::VertexIterator Vertex;
-    typedef typename Graph::EdgeIterator Edge;
+    //typedef typename Graph::EdgeIterator Edge;
 
     Graph graph;
     Vertex v0 = graph.insertVertex("vine");
@@ -459,7 +459,7 @@ template<class Graph>
 void assignment() {
     std::cout <<"assignment operator:\n";
     typedef typename Graph::VertexIterator Vertex;
-    typedef typename Graph::EdgeIterator Edge;
+    //typedef typename Graph::EdgeIterator Edge;
 
     Graph g2;
     Vertex v4 = g2.insertVertex("vertex to be clobbered");
@@ -532,7 +532,7 @@ template<class Graph>
 void conversion() {
     std::cout <<"conversion constructor:\n";
     typedef typename Graph::VertexIterator Vertex;
-    typedef typename Graph::EdgeIterator Edge;
+    //typedef typename Graph::EdgeIterator Edge;
 
     Graph graph;
     Vertex v0 = graph.insertVertex("vine");
@@ -573,7 +573,7 @@ template<class Graph>
 void assignment_conversion() {
     std::cout <<"assignment operator conversion:\n";
     typedef typename Graph::VertexIterator Vertex;
-    typedef typename Graph::EdgeIterator Edge;
+    //typedef typename Graph::EdgeIterator Edge;
 
     Graph graph;
     Vertex v0 = graph.insertVertex("vine");
@@ -1500,6 +1500,32 @@ vertexIteratorSet() {
     }
 }
 
+static void
+eraseParallelEdges() {
+    std::cout <<"erase parallel edges\n";
+
+    typedef Sawyer::Container::Graph<std::string, int> Graph;
+    typedef Graph::VertexIterator Vertex;
+
+    // Create the vertices
+    Graph g;
+    Vertex va = g.insertVertex("A");
+    Vertex vb = g.insertVertex("B");
+    Vertex vc = g.insertVertex("C");
+
+    // Create some parellel edges between the vertices
+    g.insertEdge(va, vb, 0);
+    g.insertEdge(va, vb, 1);
+    g.insertEdge(va, vb, 0);
+    g.insertEdge(va, vb, 1);
+    g.insertEdge(va, vb, 1);
+    ASSERT_always_require(va->nOutEdges() == 5);
+
+    // Remove the parallel edges
+    Sawyer::Container::Algorithm::graphEraseParallelEdges(g);
+    ASSERT_always_require(va->nOutEdges() == 2);
+}
+
 int main() {
     Sawyer::initializeLibrary();
     typedef Sawyer::Container::Graph<std::string, std::string> G1;
@@ -1526,5 +1552,5 @@ int main() {
     graphDominators02();
     graphDominators03();
     vertexIteratorSet();
-
+    eraseParallelEdges();
 }

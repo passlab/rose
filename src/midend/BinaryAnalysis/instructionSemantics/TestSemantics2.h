@@ -1,6 +1,8 @@
 // Perform basic sanity checks on instruction semantics
 #ifndef Rose_TestSemantics2_H
 #define Rose_TestSemantics2_H
+#include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
 
 #include "BaseSemantics2.h"
 #include "CommandLine.h"
@@ -118,12 +120,8 @@ public:
               const BaseSemantics::RiscOperatorsPtr &ops) {
 
         const RegisterDictionary *regdict = RegisterDictionary::dictionary_pentium4();
-        const RegisterDescriptor *reg32_ = regdict->lookup("eip");
-        require(reg32_!=NULL, "register lookup");
-        const RegisterDescriptor reg32 = *reg32_;
-        const RegisterDescriptor *segreg_ = regdict->lookup("ss");
-        require(segreg_!=NULL, "segreg lookup");
-        const RegisterDescriptor segreg = *segreg_;
+        const RegisterDescriptor reg32 = regdict->findOrThrow("eip");
+        const RegisterDescriptor segreg = regdict->findOrThrow("ss");
         SmtSolverPtr solver = SmtSolver::instance(Rose::CommandLine::genericSwitchArgs.smtSolver);
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -513,4 +511,5 @@ public:
 } // namespace
 } // namespace
 
+#endif
 #endif

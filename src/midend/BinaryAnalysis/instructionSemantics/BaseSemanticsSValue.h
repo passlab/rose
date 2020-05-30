@@ -1,5 +1,7 @@
 #ifndef ROSE_BinaryAnalysis_InstructionSemantics2_BaseSemantics_SValue_H
 #define ROSE_BinaryAnalysis_InstructionSemantics2_BaseSemantics_SValue_H
+#include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
 
 #include <BaseSemanticsTypes.h>
 #include <BinarySmtSolver.h>
@@ -236,6 +238,7 @@ public:
      * @{ */
     WithFormatter with_format(Formatter &fmt) { return WithFormatter(SValuePtr(this), fmt); }
     WithFormatter operator+(Formatter &fmt) { return with_format(fmt); }
+    WithFormatter operator+(const std::string &linePrefix);
     /** @} */
     
     /** Some subclasses support the ability to add comments to values. We define no-op versions of these methods here
@@ -256,4 +259,5 @@ std::ostream& operator<<(std::ostream&, const SValue::WithFormatter&);
 } // namespace
 } // namespace
 
+#endif
 #endif

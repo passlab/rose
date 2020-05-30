@@ -34,6 +34,7 @@ endif
 
 if ROSE_BUILD_FORTRAN_LANGUAGE_SUPPORT
    libroseOpenFortranParserlibraries = frontend/OpenFortranParser_SAGE_Connection/libroseFortran.la
+   pkgdata_DATA += $(top_srcdir)/src/3rdPartyLibraries/fortran-parser/iso_c_binding.rmod
 else
    libroseOpenFortranParserlibraries =
 endif
@@ -224,7 +225,7 @@ libroseLibraries = \
    $(top_builddir)/src/util/support/libsupport.la \
    $(top_builddir)/src/util/graphs/libgraphs.la \
    $(top_builddir)/src/util/libroseutil.la \
-   $(top_builddir)/src/util/libroseSawyer.la \
+   $(top_builddir)/src/util/Sawyer/libroseSawyer.la \
    $(top_builddir)/src/roseExtensions/failSafe/libfailsafe.la \
    $(libroseSqlite3xConnection) \
    $(libroseQtExtension)
@@ -260,6 +261,7 @@ EXTRA_DIST = CMakeLists.txt extra.docs
 
 # Header files that need to be included in the distribution
 pkginclude_HEADERS = \
+     featureTests.h \
      rose.h \
      roseInternal.h \
      rose_msvc.h \
@@ -347,6 +349,7 @@ if USING_CLANG_COMPILER
 librose_la_LIBADD += -lstdc++
 librose_la_LDFLAGS += -fno-rtti
 endif
+librose_la_LDFLAGS += -fno-rtti
 
 librose_la_DEPENDENCIES = $(libroseLibraries)
 
@@ -385,12 +388,16 @@ rose_config_LDFLAGS = $(ROSE_RPATHS)
 rose_config_DEPENDENCIES = $(REQUIRED_LIBS)
 rose_config_CPPFLAGS = -DLIBDIR='"$(libdir)"'
 rose_config_LDADD = $(ROSE_LIBS)
+if OS_MACOSX
+  rose_config_LDFLAGS += -Xlinker -rpath -Xlinker $(JAVA_JVM_PATH)
+endif
 
 # DQ (4/12/2016): This is required for use with clang (not clear how to compile ROSE with out it).
 if USING_CLANG_COMPILER
 rose_config_LDADD += -lstdc++
 rose_config_LDFLAGS += -fno-rtti
 endif
+rose_config_LDFLAGS += -fno-rtti
 
 rose_config_installed_cppflags =		\
 	-I@includedir@/rose			\
@@ -410,6 +417,7 @@ rose_config_installed_cppflags =		\
 	$(ROSE_ATERM_INCLUDE)			\
 	$(ROSE_DLIB_INCLUDES)			\
 	$(ROSE_GCRYPT_INCLUDES)			\
+	$(ROSE_CAPSTONE_INCLUDES)		\
 	$(BOOST_CPPFLAGS)
 
 rose_config_installed_ldflags =			\
@@ -444,6 +452,7 @@ rose_config_installed_ldflags =			\
 	$(ROSE_LIBMAGIC_LIBS_WITH_PATH)		\
 	$(ROSE_DLIB_LIBS_WITH_PATH)		\
 	$(ROSE_GCRYPT_LIBS_WITH_PATH)		\
+	$(ROSE_CAPSTONE_LIBS_WITH_PATH)		\
 	-lm
 if ROSE_USE_EDG_QUAD_FLOAT
   rose_config_installed_ldflags += -lquadmath
@@ -496,8 +505,9 @@ if USING_CLANG_COMPILER
   ROSEBIN_LDADD   += -lstdc++
   ROSEBIN_LDFLAGS += -fno-rtti
 endif
+  ROSEBIN_LDFLAGS += -fno-rtti
 if OS_MACOSX
-  ROSEBIN_LDFLAGS = -Xlinker -rpath $(JAVA_JVM_PATH)
+  ROSEBIN_LDFLAGS += -Xlinker -rpath -Xlinker $(JAVA_JVM_PATH)
 endif
 
 rose_compiler_SOURCES      = rose-compiler.C
@@ -545,15 +555,27 @@ check-config:
 	./rose-config --version
 
 if ROSE_BUILD_C_LANGUAGE_SUPPORT
-check-hello-c:
+if OS_MACOSX
+check-hello-c: $(eval SHELL:=/bin/bash)
 	@echo "  TEST     ROSE C compiler [rose-cc]"
 	${AM_V_at}echo "#include <stdio.h>"                     >  hello-world.c
 	${AM_V_at}echo "int main() {"                           >> hello-world.c
-	${AM_V_at}echo "   printf(\"Hello World from C!\\n\");" >> hello-world.c
+	${AM_V_at}echo "   printf(\"Hello World from C\\n\");" >> hello-world.c
 	${AM_V_at}echo "   return 0;"                           >> hello-world.c
 	${AM_V_at}echo "}"                                      >> hello-world.c
 	${AM_V_at}./rose-cc hello-world.c -o hello-world-c
 	${AM_V_at}./hello-world-c
+else
+check-hello-c:
+	@echo "  TEST     ROSE C compiler [rose-cc]"
+	${AM_V_at}echo "#include <stdio.h>"                     >  hello-world.c
+	${AM_V_at}echo "int main() {"                           >> hello-world.c
+	${AM_V_at}echo "   printf(\"Hello World from C\\n\");" >> hello-world.c
+	${AM_V_at}echo "   return 0;"                           >> hello-world.c
+	${AM_V_at}echo "}"                                      >> hello-world.c
+	${AM_V_at}./rose-cc hello-world.c -o hello-world-c
+	${AM_V_at}./hello-world-c
+endif
 endif
 if ROSE_BUILD_CXX_LANGUAGE_SUPPORT
 check-hello-cxx:

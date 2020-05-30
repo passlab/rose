@@ -12,7 +12,7 @@ endif
 noinst_LTLIBRARIES = libexperimentalRoseGeneralLanguage.la
 
 libexperimentalRoseGeneralLanguage_la_SOURCES = \
-  UntypedTraversal.C UntypedConverter.C
+  sage-tree-builder.C ModuleBuilder.C
 
 noinst_HEADERS = \
-  FASTNodes.h UntypedTraversal.h UntypedConverter.h
+  sage-tree-builder.h ModuleBuilder.h

@@ -1,3 +1,5 @@
+#include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
 #include "sage3basic.h"
 #include <Partitioner2/Partitioner.h>
 
@@ -70,7 +72,10 @@ Partitioner::Partitioner(Disassembler *disassembler, const MemoryMap::Ptr &map)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // move constructor
-Partitioner::Partitioner(BOOST_RV_REF(Partitioner) other) {
+Partitioner::Partitioner(BOOST_RV_REF(Partitioner) other)
+    : solver_(SmtSolver::instance(Rose::CommandLine::genericSwitchArgs.smtSolver)), autoAddCallReturnEdges_(false),
+      assumeFunctionsReturn_(true), stackDeltaInterproceduralLimit_(1), semanticMemoryParadigm_(LIST_BASED_MEMORY),
+      progress_(Progress::instance()), cfgProgressTotal_(0) {
     *this = boost::move(other);
 }
 
@@ -90,6 +95,7 @@ Partitioner::operator=(BOOST_RV_REF(Partitioner) other) {
     vertexIndex_.clear();                               // initialized by init(other)
     functions_ = other.functions_;
     addressNames_ = other.addressNames_;
+    sourceLocations_ = other.sourceLocations_;
 
     // FIXME[Robb Matzke 2019-06-21]: faked move semantics and no way to clear the source
     cfgAdjustmentCallbacks_ = other.cfgAdjustmentCallbacks_;
@@ -136,6 +142,7 @@ Partitioner::operator=(BOOST_RV_REF(Partitioner) other) {
     other.aum_ = AddressUsageMap();
     other.functions_ = Functions();
     other.addressNames_ = AddressNameMap();
+    other.sourceLocations_ = SourceLocations();
     
     return *this;
 }
@@ -152,7 +159,10 @@ Partitioner::~Partitioner() {
 // Copy construction, assignment, destructor when move semantics are absent
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-Partitioner::Partitioner(const Partitioner &other) {
+Partitioner::Partitioner(const Partitioner &other)
+    : solver_(SmtSolver::instance(Rose::CommandLine::genericSwitchArgs.smtSolver)), autoAddCallReturnEdges_(false),
+      assumeFunctionsReturn_(true), stackDeltaInterproceduralLimit_(1), semanticMemoryParadigm_(LIST_BASED_MEMORY),
+      progress_(Progress::instance()), cfgProgressTotal_(0) {
     // WARNING: This is a dangerous operation. Both partitioners will now be pointing to the same data and confusion is likely.
     // The only safe thing to do with the other partitioner is to delete it.
     *this = other;
@@ -170,6 +180,7 @@ Partitioner::operator=(const Partitioner &other) {
     vertexIndex_.clear();                               // initialized by init(other)
     functions_ = other.functions_;
     addressNames_ = other.addressNames_;
+    sourceLocations_ = other.sourceLocations_;
 
     cfgAdjustmentCallbacks_ = other.cfgAdjustmentCallbacks_;
     basicBlockCallbacks_ = other.basicBlockCallbacks_;
@@ -218,7 +229,7 @@ Partitioner::init(Disassembler *disassembler, const MemoryMap::Ptr &map) {
         instructionProvider_ = InstructionProvider::instance(disassembler, map);
         unparser_ = disassembler->unparser()->copy();
         insnUnparser_ = disassembler->unparser()->copy();
-        insnUnparser_->settings() = Unparser::Settings::minimal();
+        configureInsnUnparser(insnUnparser_);
     }
     undiscoveredVertex_ = cfg_.insertVertex(CfgVertex(V_UNDISCOVERED));
     indeterminateVertex_ = cfg_.insertVertex(CfgVertex(V_INDETERMINATE));
@@ -265,6 +276,17 @@ Partitioner::showStatistics() const {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Unparsing -- functions that deal with creating assembly listings
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// class method
+void
+Partitioner::configureInsnUnparser(const Unparser::Base::Ptr &unparser) const {
+    ASSERT_not_null(unparser);
+    unparser->settings() = Unparser::Settings::minimal();
+    unparser->settings().insn.address.showing = true;
+    unparser->settings().insn.address.fieldWidth = 1;
+    unparser->settings().insn.mnemonic.fieldWidth = 1;
+    unparser->settings().insn.operands.fieldWidth = 1;
+}
 
 Unparser::BasePtr
 Partitioner::unparser() const {
@@ -675,7 +697,7 @@ Partitioner::discoverBasicBlockInternal(rose_addr_t startVa) const {
         if (insn==NULL)                                                 // case: no instruction available
             goto done;
         retval->append(*this, insn);
-        if (insn->isUnknown())                                          // case: "unknown" instruction
+        if (insn->isUnknown() && !settings_.ignoringUnknownInsns)       // case: "unknown" instruction
             goto done;
 
         // Give user chance to adjust basic block successors and/or pre-compute cached analysis results
@@ -820,8 +842,15 @@ Partitioner::attachBasicBlock(const ControlFlowGraph::ConstVertexIterator &const
                                " already holds a different basic block");
     }
 
-    if (!config_.basicBlockComment(bblock->address()).empty())
-        bblock->comment(config_.basicBlockComment(bblock->address()));
+    if (bblock->sourceLocation().isEmpty())
+        bblock->sourceLocation(sourceLocations_(bblock->address()));
+
+    // Adjust the basic block according to configuration information. Configuration overrides automatically-detected values.
+    const BasicBlockConfig &c = config_.basicBlock(bblock->address());
+    if (!c.comment().empty())
+        bblock->comment(c.comment());
+    if (!c.sourceLocation().isEmpty())
+        bblock->sourceLocation(c.sourceLocation());
 
     bblock->freeze();
 
@@ -945,7 +974,12 @@ Partitioner::basicBlockSuccessors(const BasicBlock::Ptr &bb, Precision::Level pr
 
     BasicBlockSemantics sem = bb->semantics();
     BaseSemantics::StatePtr state;
-    if (precision > Precision::LOW && (state = sem.finalState())) {
+    if (settings_.ignoringUnknownInsns && lastInsn->isUnknown()) {
+        // Special case for "unknown" instructions... the successor is assumed to be the fall-through address.
+        rose_addr_t va = lastInsn->get_address() + lastInsn->get_size();
+        BaseSemantics::RiscOperatorsPtr ops = newOperators();
+        successors.push_back(BasicBlock::Successor(Semantics::SValue::promote(ops->number_(REG_IP.nBits(), va))));
+    } else if (precision > Precision::LOW && (state = sem.finalState())) {
         // Use our own semantics if we have them.
         ASSERT_not_null(sem.dispatcher);
         ASSERT_not_null(sem.operators);
@@ -969,21 +1003,11 @@ Partitioner::basicBlockSuccessors(const BasicBlock::Ptr &bb, Precision::Level pr
 
             successors.push_back(BasicBlock::Successor(pc));
         }
-
     } else {
-        // We don't have semantics, so delegate to the SgAsmInstruction subclass (which might try some other semantics).
+        // We don't have semantics, so naively look at just the last instruction.
         bool complete = true;
-#if 0 // [Robb P. Matzke 2014-08-16]
-        // Look at the entire basic block to try to figure out the successors.  We already did something very similar above, so
-        // if our try failed then this one probably will too.  In fact, this one will be even slower because it must reprocess
-        // the entire basic block each time it's called because it is stateless, whereas ours above only needed to process each
-        // instruction as it was appended to the block.
-        std::set<rose_addr_t> successorVas = lastInsn->getSuccessors(bb->instructions(), &complete, memoryMap_);
-#else
-        // Look only at the final instruction of the basic block.  This is probably quite fast compared to looking at a whole
-        // basic block.
         std::set<rose_addr_t> successorVas = lastInsn->getSuccessors(&complete);
-#endif
+
         BaseSemantics::RiscOperatorsPtr ops = newOperators();
         BOOST_FOREACH (rose_addr_t va, successorVas)
             successors.push_back(BasicBlock::Successor(Semantics::SValue::promote(ops->number_(REG_IP.nBits(), va))));
@@ -1733,15 +1757,21 @@ Partitioner::attachFunction(const Function::Ptr &function) {
             throw FunctionError(function, functionName(function) + " is already attached with a different function pointer");
         ASSERT_require(function->isFrozen());
     } else {
-        // Give the function a name and comment.
-        if (!config_.functionName(function->address()).empty())
-            function->name(config_.functionName(function->address()));          // forced name from configuration
+        // Give the function a name and comment and make other adjustments according to user configuration files.
+        const FunctionConfig &c = config_.function(function->address());
+        if (!c.name().empty())
+            function->name(c.name());                   // forced name from configuration
         if (function->name().empty())
-            function->name(config_.functionDefaultName(function->address()));   // default name if function has none
+            function->name(c.defaultName());            // default name if function has none
         if (function->name().empty())
-            function->name(addressName(function->address()));                   // use address name if nothing else
-        if (function->comment().empty())
-            function->comment(config_.functionComment(function));
+            function->name(addressName(function->address())); // use address name if nothing else
+        if (c.comment().empty())
+            function->comment(c.comment());
+        if (!c.sourceLocation().isEmpty()) {
+            function->sourceLocation(c.sourceLocation());
+        } else if (function->sourceLocation().isEmpty()) {
+            function->sourceLocation(sourceLocations_(function->address()));
+        }
 
         // Insert function into the table, and make sure all its basic blocks see that they're owned by the function.
         functions_.insert(function->address(), function);
@@ -2240,7 +2270,6 @@ Partitioner::functionDataFlowConstants(const Function::Ptr &function) const {
     const RegisterDescriptor SP = cpu->stackPointerRegister();
     const RegisterDescriptor memSegReg;
     BaseSemantics::SValuePtr initialStackPointer = ops->peekRegister(SP);
-    size_t wordSize = SP.nBits() >> 3;              // word size in bytes
 
     // Run the data flow
     try {
@@ -2255,7 +2284,6 @@ Partitioner::functionDataFlowConstants(const Function::Ptr &function) const {
         return retval;
     }
 
-
     // Scan all outgoing states and accumulate any concrete values we find.
     BOOST_FOREACH (StatePtr state, dfEngine.getFinalStates()) {
         if (state) {
@@ -2267,21 +2295,9 @@ Partitioner::functionDataFlowConstants(const Function::Ptr &function) const {
                     retval.insert(kv.value->get_number());
             }
 
-            BOOST_FOREACH (const StackVariable &var, DataFlow::findStackVariables(ops, initialStackPointer)) {
-                BaseSemantics::SValuePtr value = ops->readMemory(memSegReg, var.location.address,
-                                                                 ops->undefined_(8*var.location.nBytes), ops->boolean_(true));
-                if (value->is_number() && value->get_width() <= SP.nBits())
-                    retval.insert(value->get_number());
-            }
-
-            BOOST_FOREACH (const AbstractLocation &var, DataFlow::findGlobalVariables(ops, wordSize)) {
-                if (var.isAddress()) {
-                    BaseSemantics::SValuePtr value = ops->readMemory(memSegReg, var.getAddress(),
-                                                                     ops->undefined_(8*var.nBytes()), ops->boolean_(true));
-                    if (value->is_number() && value->get_width() <= SP.nBits())
-                        retval.insert(value->get_number());
-                }
-            }
+            BaseSemantics::MemoryCellStatePtr mem = BaseSemantics::MemoryCellState::promote(state->memoryState());
+            std::set<rose_addr_t> vas = Variables::VariableFinder().findAddressConstants(mem);
+            retval.insert(vas.begin(), vas.end());
         }
     }
     return retval;
@@ -2307,7 +2323,7 @@ Partitioner::bblockAttached(const ControlFlowGraph::VertexIterator &newVertex) {
             } else {
                 debug <<"attached basic block:\n";
                 BOOST_FOREACH (SgAsmInstruction *insn, bblock->instructions())
-                    debug <<"  + " <<unparseInstructionWithAddress(insn) <<"\n";
+                    debug <<"  + " <<unparse(insn) <<"\n";
             }
         } else {
             debug <<"inserted basic block placeholder at " <<StringUtility::addrToString(startVa) <<"\n";
@@ -2333,7 +2349,7 @@ Partitioner::bblockDetached(rose_addr_t startVa, const BasicBlock::Ptr &bblock) 
             } else {
                 debug <<"detached basic block:\n";
                 BOOST_FOREACH (SgAsmInstruction *insn, bblock->instructions())
-                    debug <<"  - " <<unparseInstructionWithAddress(insn) <<"\n";
+                    debug <<"  - " <<unparse(insn) <<"\n";
             }
         } else {
             debug <<"erased basic block placeholder at " <<StringUtility::addrToString(startVa) <<"\n";
@@ -2445,6 +2461,34 @@ Partitioner::checkConsistency() const {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CFG utilities
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void
+Partitioner::expandIndeterminateCalls() {
+    std::vector<ControlFlowGraph::VertexIterator> allFunctions;
+    for (ControlFlowGraph::VertexIterator vertex = cfg_.vertices().begin(); vertex != cfg_.vertices().end(); ++vertex) {
+        // Look for indeterminate function calls
+        std::vector<ControlFlowGraph::EdgeIterator> indeterminateEdges;
+        for (ControlFlowGraph::EdgeIterator edge = vertex->outEdges().begin(); edge != vertex->outEdges().end(); ++edge) {
+            if (edge->value().type() == E_FUNCTION_CALL && edge->target()->value().type() == V_INDETERMINATE)
+                indeterminateEdges.push_back(edge);
+        }
+
+        if (!indeterminateEdges.empty()) {
+            BOOST_FOREACH (ControlFlowGraph::EdgeIterator edge, indeterminateEdges)
+                cfg_.eraseEdge(edge);
+
+            if (allFunctions.empty()) {
+                for (ControlFlowGraph::VertexIterator v = cfg_.vertices().begin(); v != cfg_.vertices().end(); ++v) {
+                    if (v->value().isEntryBlock())
+                        allFunctions.push_back(v);
+                }
+            }
+
+            BOOST_FOREACH (ControlFlowGraph::VertexIterator target, allFunctions)
+                cfg_.insertEdge(vertex, target, CfgEdge(E_FUNCTION_CALL));
+        }
+    }
+}
 
 // class method
 std::string
@@ -2945,7 +2989,7 @@ Partitioner::rebuildVertexIndices() {
         insnUnparser_ = instructionProvider().disassembler()->unparser()->copy();
     }
     if (insnUnparser_)
-        insnUnparser_->settings() = Unparser::Settings::minimal();
+        configureInsnUnparser(insnUnparser_);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2966,3 +3010,5 @@ Partitioner::pythonUnparse() const {
 } // namespace
 } // namespace
 } // namespace
+
+#endif

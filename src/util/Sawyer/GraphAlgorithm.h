@@ -12,6 +12,7 @@
 
 #include <Sawyer/Sawyer.h>
 #include <Sawyer/DenseIntegerSet.h>
+#include <Sawyer/GraphIteratorMap.h>
 #include <Sawyer/GraphTraversal.h>
 #include <Sawyer/Set.h>
 
@@ -254,7 +255,7 @@ void
 graphEraseParallelEdges(Graph &g) {
     BOOST_FOREACH (const typename Graph::Vertex &src, g.vertices()) {
         if (src.nOutEdges() > 1) {
-            Map<typename Graph::ConstVertexIterator /*target*/, std::vector<typename Graph::ConstEdgeIterator> > edgesByTarget;
+            GraphIteratorMap<typename Graph::ConstVertexIterator /*target*/, std::vector<typename Graph::ConstEdgeIterator> > edgesByTarget;
             typename Graph::ConstEdgeIterator nextEdge = src.outEdges().begin();
             while (nextEdge != src.outEdges().end()) {
                 typename Graph::ConstEdgeIterator curEdge = nextEdge++;
@@ -1158,7 +1159,7 @@ std::vector<typename GraphTraits<Graph>::VertexIterator>
 graphDirectedDominators(Graph &g, typename GraphTraits<Graph>::VertexIterator root) {
     typedef typename GraphTraits<Graph>::VertexIterator VertexIterator;
     typedef typename GraphTraits<Graph>::EdgeIterator EdgeIterator;
-    typedef typename GraphTraits<Graph>::Edge Edge;
+    //typedef typename GraphTraits<Graph>::Edge Edge;
     static const size_t NO_ID = (size_t)(-1);
 
     ASSERT_require(g.isValidVertex(root));

@@ -71,6 +71,9 @@ endif
 export ALL_LIBDIRS
 ALL_LIBDIRS = ${ALL_LIBDIRS}
 
+# Export TEMPDIR since TMPDIR is apparently blocked.
+export TEMPDIR
+
 ########################################################################################################################
 # Supported languages.
 ########################################################################################################################
@@ -78,8 +81,6 @@ ALL_LIBDIRS = ${ALL_LIBDIRS}
 ifeq (@(ENABLE_ADA_ANALYSIS),yes)
     error Ada is not supported by the tup ROSE build system yet
 endif
-
-# @(ENABLE_BINARY_ANALYSIS) is supported
 
 ifeq (@(ENABLE_COBOL_ANALYSIS),yes)
     error COBOL is not supported by the tup ROSE build system yet
@@ -92,8 +93,6 @@ endif
 ifeq (@(ENABLE_CUDA_ANALYSIS),yes)
     error CUDA is not supported by the tup ROSE build system yet
 endif
-
-# @(ENABLE_CXX_ANALYSIS) is supported
 
 ifeq (@(ENABLE_FORTRAN_ANALYSIS),yes)
     error Fortran is not supported by the tup ROSE build system yet
@@ -125,6 +124,13 @@ endif
 
 ifeq (@(ENABLE_PYTHON_ANALYSIS),yes)
     error Python is not supported by the tup ROSE build system yet
+endif
+
+# The C preprocessor is supported automatically if C, C++, or Fortran is enabled
+ifeq (@(ENABLE_CXX_ANALYSIS)-@(ENABLE_FORTRAN_ANALYSIS),no-no)
+    ENABLE_CPP_ANALYSIS=no
+else
+    ENABLE_CPP_ANALYSIS=yes
 endif
 
 ########################################################################################################################
@@ -175,6 +181,18 @@ endif
 # Binwalk binary search and extraction tool
 ifneq (@(WITH_BINWALK),no)
     BINWALK_ROOT = @(WITH_BINWALK)
+endif
+
+# Capstone disassembler
+ifneq (@(WITH_CAPSTONE),no)
+    CAPSTONE_ROOT = @(WITH_CAPSTONE)
+    ifneq (@(WITH_CAPSTONE),system)
+	CPPFLAGS += @(CPP_INCDIR_SWITCH)$(CAPSTONE_ROOT)/include
+	LDFLAGS_STATIC  += @(CXX_LIBDIR_SWITCH)$(CAPSTONE_ROOT)/lib
+	LDFLAGS_SHARED  += @(CXX_RPATH_SWITCH)$(CAPSTONE_ROOT)/lib @(CXX_LIBDIR_SWITCH)$(CAPSTONE_ROOT)/lib
+    endif
+    LDFLAGS_STATIC += @(CXX_LIB_SWITCH)capstone
+    LDFLAGS_SHARED += @(CXX_LIB_SWITCH)capstone
 endif
 
 # Dlib general-purpose cross platform library

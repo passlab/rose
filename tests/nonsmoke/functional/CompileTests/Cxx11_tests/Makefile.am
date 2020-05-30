@@ -659,6 +659,7 @@ TESTCODES_REQUIRED_TO_PASS = \
    test2019_485.C \
    test2019_486.C \
    test2019_487.C \
+   test2019_488.C \
    test2019_489.C \
    test2019_490.C \
    test2019_491.C \
@@ -672,7 +673,67 @@ TESTCODES_REQUIRED_TO_PASS = \
    test2019_500.C \
    test2019_501.C \
    test2019_502.C \
-   test2019_503.C 
+   test2019_503.C \
+   test2019_512.C \
+   test2019_513.C \
+   test2019_514.C \
+   test2019_515.C \
+   test2019_524.C \
+   test2020_01.C \
+   test2020_02.C \
+   test2020_03.C \
+   test2020_04.C \
+   test2020_05.C \
+   test2020_06.C \
+   test2020_07.C \
+   test2020_08.C \
+   test2020_09.C \
+   test2020_10.C \
+   test2020_11.C \
+   test2020_12.C \
+   test2020_13.C \
+   test2020_14.C \
+   test2020_15.C \
+   test2020_16.C \
+   test2020_17.C \
+   test2020_18.C \
+   test2020_19.C \
+   test2020_20.C \
+   test2020_21.C \
+   test2020_22.C \
+   test2020_23.C \
+   test2020_24.C \
+   test2020_25.C \
+   test2020_26.C \
+   test2020_27.C \
+   test2020_28.C \
+   test2020_29.C \
+   test2020_30.C \
+   test2020_31.C \
+   test2020_32.C \
+   test2020_33.C \
+   test2020_34.C \
+   test2020_35.C \
+   test2020_36.C \
+   test2020_37.C \
+   test2020_38.C \
+   test2020_39.C \
+   test2020_41.C \
+   test2020_42.C \
+   test2020_43.C \
+   test2020_44.C \
+   test2020_45.C \
+   test2020_46.C \
+   test2020_47.C \
+   test2020_48.C \
+   test2020_49.C \
+   test2020_50.C \
+   test2020_52.C \
+   test2020_53.C \
+   test2020_57.C \
+   test2020_58.C \
+   test2020_59.C \
+   test2020_66.C 
 
 TESTCODE_CURRENTLY_FAILING = \
    test2012_10.C \
@@ -780,11 +841,19 @@ TESTCODE_CURRENTLY_FAILING = \
    test2019_411.C \
    test2019_438.C \
    test2019_453.C \
-   test2019_488.C \
-   test2019_489.C \
-   test2019_490.C \
-   test2019_491.C \
-   test2019_492.C 
+   test2019_492.C \
+   test2019_504.C \
+   test2019_505.C \
+   test2019_506.C \
+   test2019_511.C \
+   test2019_516.C \
+   test2019_523.C \
+   test2020_40.C \
+   test2020_51a.C \
+   test2020_51b.C \
+   test2020_54.C \
+   test2020_55.C \
+   test2020_56.C
 
 # NOTE: test2016_40.C fails due to a problem isolated into test2019_167.C (which required a more general form of name qualification support).
 
@@ -810,44 +879,18 @@ else
 endif
 endif
 
-if ROSE_USE_EDG_VERSION_4_9
-if ROSE_USING_GCC_VERSION_LATER_4_9
-  TESTCODES_REQUIRED_TO_PASS += \
-   test2012_08.C \
-   test2016_26.C \
-   test2016_27.C \
-   test2016_31.C \
-   test2018_60.C \
-   test2018_63.C \
-   test2018_64.C \
-   test2018_65.C \
-   test2018_71.C 
-else
-# DQ (1/4/2019): These tests fail with the EDG 4.9 and GNU 4.8 compiler (Note: EDG 4.9 is only tested with the GNU 4.8 compiler).
-  TESTCODE_CURRENTLY_FAILING += \
-   test2012_08.C \
-   test2016_26.C \
-   test2016_27.C \
-   test2016_31.C \
-   test2018_60.C \
-   test2018_63.C \
-   test2018_64.C \
-   test2018_65.C \
-   test2018_71.C 
-endif
-else
-  TESTCODES_REQUIRED_TO_PASS += \
-   test2012_08.C \
-   test2018_60.C \
-   test2018_63.C \
-   test2018_64.C \
-   test2018_65.C \
-   test2018_71.C \
-   test2019_57.C \
-   test2019_58.C \
-   test2019_158.C \
-   test2019_159.C \
-   test2019_161.C 
+TESTCODES_REQUIRED_TO_PASS += \
+ test2012_08.C \
+ test2018_60.C \
+ test2018_63.C \
+ test2018_64.C \
+ test2018_65.C \
+ test2018_71.C \
+ test2019_57.C \
+ test2019_58.C \
+ test2019_158.C \
+ test2019_159.C \
+ test2019_161.C 
 if USING_INTEL_COMPILER
    TESTCODE_CURRENTLY_FAILING += \
      test2016_26.C \
@@ -860,7 +903,6 @@ else
      test2016_27.C \
      test2016_31.C \
      test2019_162.C
-endif
 endif
 
 if USING_INTEL_COMPILER
@@ -1002,12 +1044,53 @@ test2019_198_ab: ../../testTranslator
 test2019_200_ab: ../../testTranslator
 	$(VALGRIND) $(TEST_TRANSLATOR) $(ROSE_FLAGS)  $(TESTCODE_INCLUDES) -c $(srcdir)/test2019_200_a.C $(srcdir)/test2019_200_b.C
 
+test2019_507_ab: ../../testTranslator
+	$(VALGRIND) $(TEST_TRANSLATOR) $(ROSE_FLAGS)  $(TESTCODE_INCLUDES) -c $(srcdir)/test2019_507a.C $(srcdir)/test2019_507b.C
+
+test2019_508_ab: ../../testTranslator
+	$(VALGRIND) $(TEST_TRANSLATOR) $(ROSE_FLAGS)  $(TESTCODE_INCLUDES) -c $(srcdir)/test2019_508a.C $(srcdir)/test2019_508b.C
+
+test2019_509_ab: ../../testTranslator
+	$(VALGRIND) $(TEST_TRANSLATOR) $(ROSE_FLAGS)  $(TESTCODE_INCLUDES) -c $(srcdir)/test2019_509a.C $(srcdir)/test2019_509b.C
+
+test2019_510_ab: ../../testTranslator
+	$(VALGRIND) $(TEST_TRANSLATOR) $(ROSE_FLAGS)  $(TESTCODE_INCLUDES) -c $(srcdir)/test2019_510a.C $(srcdir)/test2019_510b.C
+
+test2019_517_ab: ../../testTranslator
+	$(VALGRIND) $(TEST_TRANSLATOR) $(ROSE_FLAGS)  $(TESTCODE_INCLUDES) -c $(srcdir)/test2019_517a.C $(srcdir)/test2019_517b.C
+
+test2019_518_ab: ../../testTranslator
+	$(VALGRIND) $(TEST_TRANSLATOR) $(ROSE_FLAGS)  $(TESTCODE_INCLUDES) -c $(srcdir)/test2019_518a.C $(srcdir)/test2019_518b.C
+
+test2019_519_ab: ../../testTranslator
+	$(VALGRIND) $(TEST_TRANSLATOR) $(ROSE_FLAGS)  $(TESTCODE_INCLUDES) -c $(srcdir)/test2019_519a.C $(srcdir)/test2019_519b.C
+
+test2019_520_ab: ../../testTranslator
+	$(VALGRIND) $(TEST_TRANSLATOR) $(ROSE_FLAGS)  $(TESTCODE_INCLUDES) -c $(srcdir)/test2019_520a.C $(srcdir)/test2019_520b.C
+
+test2019_521_ab: ../../testTranslator
+	$(VALGRIND) $(TEST_TRANSLATOR) $(ROSE_FLAGS)  $(TESTCODE_INCLUDES) -c $(srcdir)/test2019_521a.C $(srcdir)/test2019_521b.C
+
+test2019_522_ab: ../../testTranslator
+	$(VALGRIND) $(TEST_TRANSLATOR) $(ROSE_FLAGS)  $(TESTCODE_INCLUDES) -c $(srcdir)/test2019_522a.C $(srcdir)/test2019_522b.C
+
+test2020_51ab: ../../testTranslator
+	$(VALGRIND) $(TEST_TRANSLATOR) $(ROSE_FLAGS)  $(TESTCODE_INCLUDES) -c $(srcdir)/test2020_51a.C $(srcdir)/test2020_51b.C
+
 
 
 #########
 # Targets lists
 
-PASSING_TEST_Source_passed = ${TESTCODES:.C=.C.passed}
+# PASSING_TEST_Source_passed = ${TESTCODES:.C=.C.passed}
+
+MULTIFILE_TESTS = \
+   test2019_196_ab test2019_198_ab test2019_507_ab test2019_508_ab test2019_509_ab \
+   test2019_510_ab test2019_517_ab test2019_518_ab test2019_519_ab test2019_521_ab \
+   test2019_522_ab test2020_51ab
+
+PASSING_TEST_Source_passed = ${TESTCODES:.C=.C.passed} $(MULTIFILE_TESTS)
+
 TEST_Source_passed = ${ALL_TESTCODES:.C=.C.passed}
 
 #########
@@ -1055,51 +1138,6 @@ endif
 EXTRA_DIST = $(TESTCODES_REQUIRED_TO_PASS) $(TESTCODE_CURRENTLY_FAILING)
 
 check-local:
-# DQ (2/19/2017): NEW VERSION OF LOGIC
-# DQ (2/18/2017): More specific logic required for portability.
-# When using EDG 4.9 these files don't compile on later versions of GNU, CLANG, and Intel compilers 
-# but we still want them tests as we transition to EDG 4.12 (where they all work fine independent of 
-# the compiler vendor and GNU compiler version).
-if ROSE_USE_EDG_VERSION_4_9
-	@echo "ROSE_USE_EDG_VERSION_4_9 == true"
-if USING_GNU_COMPILER
-	@echo "USING_GCC_COMPILER == true"
-if ROSE_USING_GCC_VERSION_LATER_4_8
-	@echo "ROSE_USING_GCC_VERSION_LATER_4_8 == true"
-#	@echo "C++11 tests using EDG 4.9 and GNU version 4.9 backend compiler are disabled."
-if ROSE_USING_GCC_VERSION_LATER_4_9
-	@echo "C++11 tests using EDG 4.9: GNU 4.9 backend compiler NOT allowed with the EDG 4.9 frontend (reconfigure with EDG 4.12)."
-else  # NOT ROSE_USING_GCC_VERSION_LATER_4_9
-	@echo "C++11 tests using EDG 4.9 and GNU version 4.8 backend compiler are allowed."
-	@$(MAKE) $(PASSING_TEST_Source_passed)
-endif # ROSE_USING_GCC_VERSION_LATER_4_9
-# Exclude these tests on GNU 4.9 and later compilers).
-else  # NOT ROSE_USING_GCC_VERSION_LATER_4_8
-# If this is not the CLANG or Intel compilers and an earlier version of GNU than GNU 4.9 compiler, so include these files.
-	@echo "ROSE_USING_GCC_VERSION_LATER_4_8 == false"
-endif # ROSE_USING_GCC_VERSION_LATER_4_8
-else  # NOT USING_GNU_COMPILER
-	@echo "USING_GCC_COMPILER == false"
-if USING_CLANG_COMPILER
-# Exclude this list of files in the case of CLANG compiler.
-#	@echo "USING_CLANG_COMPILER == true"
-	@echo "C++11 tests using EDG 4.9: Clang backend compiler are NOT allowed with the EDG 4.9 frontend."
-else # NOT USING_CLANG_COMPILER
-#	@echo "USING_CLANG_COMPILER == false"
-if USING_INTEL_COMPILER
-# Exclude this list of files in the case of Intel compiler.
-#	@echo "USING_INTEL_COMPILER == true"
-	@echo "C++11 tests using EDG 4.9 Intel backend compiler are NOT allowed."
-#	@$(MAKE) $(PASSING_TEST_Objects)
-else # NOT USING_INTEL_COMPILER
-# This is an unknown compiler.
-#	@echo "USING_INTEL_COMPILER == false"
-endif # USING_INTEL_COMPILER
-endif # USING_CLANG_COMPILER
-endif # USING_GNU_COMPILER
-else  # NOT ROSE_USE_EDG_VERSION_4_9
-# Using EDG 4.12 or later (run all tests independent of the compiler).
-#	@echo "ROSE_USE_EDG_VERSION_4_9 == false"
 if USING_GNU_COMPILER
 if ROSE_USING_GCC_VERSION_LATER_4_8
 	@echo "C++11 tests require configuration with either EDG version 4.9 and GNU version 4.8 or backend compiler or EDG 4.12 and 4.8 or any later GNU compiler."
@@ -1107,7 +1145,6 @@ if ROSE_USING_GCC_VERSION_LATER_4_8
 	@$(MAKE) $(PASSING_TEST_Source_passed)
 endif # ROSE_USING_GCC_VERSION_LATER_4_8
 else
-	@echo "ROSE_USE_EDG_VERSION_4_9 == false"
 if USING_CLANG_COMPILER
 # Exclude this list of files in the case of CLANG compiler.
 	@echo "USING_CLANG_COMPILER == true"
@@ -1127,7 +1164,6 @@ else # NOT USING_INTEL_COMPILER
 endif # USING_INTEL_COMPILER
 endif # USING_CLANG_COMPILER
 endif # USING_GNU_COMPILER
-endif # ROSE_USE_EDG_VERSION_4_9
 	@echo "*********************************************************************************************************************"
 	@echo "****** ROSE/tests/nonsmoke/functional/CompileTests/Cxx11_tests: make check rule complete (terminated normally) ******"
 	@echo "*********************************************************************************************************************"

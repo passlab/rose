@@ -1,11 +1,14 @@
 #ifndef ROSE_BinaryAnalysis_InstructionSemantics2_BaseSemantics_Types_H
 #define ROSE_BinaryAnalysis_InstructionSemantics2_BaseSemantics_Types_H
+#include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
 
 // Basic types needed by almost all other instruction semantics layers
 
 #include <boost/serialization/shared_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 #include <Sawyer/SharedPointer.h>
+#include <Sawyer/Set.h>
 
 namespace Rose {
 namespace BinaryAnalysis {
@@ -92,4 +95,5 @@ typedef Sawyer::Container::Set<InputOutputProperty> InputOutputPropertySet;
 } // namespace
 } // namespace
 
+#endif
 #endif

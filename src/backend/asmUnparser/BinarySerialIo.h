@@ -1,6 +1,9 @@
 #ifndef Rose_BinaryAnalysis_SerialIo_H
 #define Rose_BinaryAnalysis_SerialIo_H
 
+#include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
+
 #include <Progress.h>
 #include <RoseException.h>
 #include <boost/filesystem.hpp>
@@ -103,7 +106,7 @@ class Partitioner;
  *      loader->format(SerialIo::XML);
  *      loader->open(fileName);
  *      partitioner = loader->loadPartitioner();
- *      myVector = loader->loadObject<P2::Partitioner>(myVectorTypeId);
+ *      myVector = loader->loadObject<std::vector<double> >(myVectorTypeId);
  *      loader->close();
  *      loader->mlog[INFO] <<"; loaded\n";
  *  } catch (const SerialIo::Exception &e) {
@@ -590,4 +593,5 @@ protected:
 } // namespace
 } // namespace
 
+#endif
 #endif

@@ -1,7 +1,12 @@
 #ifndef ROSE_Partitioner2_BasicTypes_H
 #define ROSE_Partitioner2_BasicTypes_H
 
+#include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
+
 #include <boost/filesystem.hpp>
+#include <boost/foreach.hpp>
+#include <boost/regex.hpp>
 #include <boost/serialization/access.hpp>
 #include <boost/serialization/nvp.hpp>
 #include <boost/serialization/version.hpp>
@@ -223,6 +228,15 @@ struct LoaderSettings {
                                                      *   output file name and the space separated list of input names. The
                                                      *   names are escaped when the command is generated and therefore the "%o"
                                                      *   and "%f" should not be quoted. */
+    std::vector<std::string> envEraseNames;         /**< List of environment variable names that should be removed before
+                                                     *   launching a "run:" specimen. These names are matched exactly. */
+    std::vector<boost::regex> envErasePatterns;     /**< List of regular expressions for removing environment variables
+                                                     *   before launching a "run:" specimen. The expressions match only the
+                                                     *   variable name, not its value. */
+    std::vector<std::string> envInsert;             /**< List of environment variable names and values to be inserted before
+                                                     *   launching a "run:" specimen. Each string must contain an equal sign
+                                                     *   that separates the name from the value (the first \"=\" if more
+                                                     *   than one. */
 
     LoaderSettings()
         : deExecuteZerosThreshold(0), deExecuteZerosLeaveAtFront(16), deExecuteZerosLeaveAtBack(1),
@@ -239,6 +253,20 @@ private:
         s & BOOST_SERIALIZATION_NVP(deExecuteZerosLeaveAtBack);
         s & BOOST_SERIALIZATION_NVP(memoryDataAdjustment);
         s & BOOST_SERIALIZATION_NVP(memoryIsExecutable);
+        if (version >= 1) {
+            s & BOOST_SERIALIZATION_NVP(envEraseNames);
+            s & BOOST_SERIALIZATION_NVP(envInsert);
+
+            // There's no serialization for boost::regex, so we do it ourselves.
+            std::vector<std::string> reStrings;
+            BOOST_FOREACH (const boost::regex &re, envErasePatterns)
+                reStrings.push_back(re.str());
+            s & BOOST_SERIALIZATION_NVP(reStrings);
+            if (envErasePatterns.empty()) {
+                BOOST_FOREACH (const std::string &reStr, reStrings)
+                    envErasePatterns.push_back(boost::regex(reStr));
+            }
+        }
     }
 };
 
@@ -281,20 +309,23 @@ struct BasePartitionerSettings {
                                                      *   of certain kinds of opaque predicates. */
     bool checkingCallBranch;                        /**< Check for situations where CALL is used as a branch. */
     bool basicBlockSemanticsAutoDrop;               /**< Conserve memory by dropping semantics for attached basic blocks. */
+    bool ignoringUnknownInsns;                      /**< Whether to ignore unkonwn insns when extending basic blocks. */
 
 private:
     friend class boost::serialization::access;
 
     template<class S>
-    void serialize(S &s, const unsigned /*version*/) {
+    void serialize(S &s, const unsigned version) {
         s & BOOST_SERIALIZATION_NVP(usingSemantics);
         s & BOOST_SERIALIZATION_NVP(checkingCallBranch);
         s & BOOST_SERIALIZATION_NVP(basicBlockSemanticsAutoDrop);
+        if (version >= 1)
+            s & BOOST_SERIALIZATION_NVP(ignoringUnknownInsns);
     }
 
 public:
     BasePartitionerSettings()
-        : usingSemantics(false), checkingCallBranch(false), basicBlockSemanticsAutoDrop(true) {}
+        : usingSemantics(false), checkingCallBranch(false), basicBlockSemanticsAutoDrop(true), ignoringUnknownInsns(false) {}
 };
 
 /** Settings that control the engine partitioning.
@@ -306,7 +337,7 @@ public:
  *  The runtime descriptions and command-line parser for these switches can be obtained from @ref partitionerSwitches. */
 struct PartitionerSettings {
     BasePartitionerSettings base;
-    std::vector<rose_addr_t> startingVas;           /**< Addresses at which to start recursive disassembly. These
+    std::vector<rose_addr_t> functionStartingVas;   /**< Addresses at which to start recursive disassembly. These
                                                      *   addresses are in addition to entry addresses, addresses from
                                                      *   symbols, addresses from configuration files, etc. */
     bool followingGhostEdges;                       /**< Should ghost edges be followed during disassembly?  A ghost edge
@@ -359,7 +390,7 @@ private:
     template<class S>
     void serialize(S &s, unsigned version) {
         s & BOOST_SERIALIZATION_NVP(base);
-        s & BOOST_SERIALIZATION_NVP(startingVas);
+        s & BOOST_SERIALIZATION_NVP(functionStartingVas);
         s & BOOST_SERIALIZATION_NVP(followingGhostEdges);
         s & BOOST_SERIALIZATION_NVP(discontiguousBlocks);
         s & BOOST_SERIALIZATION_NVP(maxBasicBlockSize);
@@ -473,5 +504,8 @@ typedef Sawyer::SharedPointer<ThunkPredicates> ThunkPredicatesPtr;
 
 // Class versions must be at global scope
 BOOST_CLASS_VERSION(Rose::BinaryAnalysis::Partitioner2::PartitionerSettings, 6);
+BOOST_CLASS_VERSION(Rose::BinaryAnalysis::Partitioner2::BasePartitionerSettings, 1);
+BOOST_CLASS_VERSION(Rose::BinaryAnalysis::Partitioner2::LoaderSettings, 1);
 
+#endif
 #endif

@@ -1,3 +1,5 @@
+#include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
 #include <sage3basic.h>
 #include <BinaryPointerDetection.h>
 
@@ -225,7 +227,7 @@ Analysis::printInstructionsForDebugging(const P2::Partitioner &partitioner, cons
         BOOST_FOREACH (rose_addr_t bbVa, function->basicBlockAddresses()) {
             if (P2::BasicBlock::Ptr bb = partitioner.basicBlockExists(bbVa)) {
                 BOOST_FOREACH (SgAsmInstruction *insn, bb->instructions()) {
-                    mlog[DEBUG] <<"    " <<unparseInstructionWithAddress(insn) <<"\n";
+                    mlog[DEBUG] <<"    " <<partitioner.unparse(insn) <<"\n";
                 }
             }
         }
@@ -387,3 +389,5 @@ Analysis::analyzeFunction(const P2::Partitioner &partitioner, const P2::Function
 } // namespace
 } // namespace
 } // namespace
+
+#endif

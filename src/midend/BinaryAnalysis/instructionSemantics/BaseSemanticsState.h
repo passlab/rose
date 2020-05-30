@@ -1,5 +1,7 @@
 #ifndef ROSE_BinaryAnalysis_InstructionSemantics2_BaseSemantics_State_H
 #define ROSE_BinaryAnalysis_InstructionSemantics2_BaseSemantics_State_H
+#include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
 
 #include <BaseSemanticsTypes.h>
 
@@ -216,9 +218,18 @@ public:
      *  Formatter fmt = ...;
      *  std::cout <<"The value is: " <<(*obj+fmt) <<"\n";
      * @endcode
+     *
+     * Since specifying a line prefix string for indentation purposes is such a common use case, the
+     * indentation can be given instead of a format, as in the following code that indents the
+     * prefixes each line of the expression with four spaces.
+     *
+     * @code
+     *  std::cout <<"Current state:\n" <<*(obj + "    ");
+     * @code
      * @{ */
     WithFormatter with_format(Formatter &fmt) { return WithFormatter(shared_from_this(), fmt); }
     WithFormatter operator+(Formatter &fmt) { return with_format(fmt); }
+    WithFormatter operator+(const std::string &linePrefix);
     /** @} */
 
     /** Merge operation for data flow analysis.
@@ -237,4 +248,5 @@ std::ostream& operator<<(std::ostream&, const State::WithFormatter&);
 } // namespace
 } // namespace
 
+#endif
 #endif

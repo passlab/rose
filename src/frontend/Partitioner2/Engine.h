@@ -1,9 +1,13 @@
 #ifndef ROSE_Partitioner2_Engine_H
 #define ROSE_Partitioner2_Engine_H
 
+#include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
+
 #include <BinaryLoader.h>
 #include <BinarySerialIo.h>
 #include <boost/noncopyable.hpp>
+#include <boost/regex.hpp>
 #include <Disassembler.h>
 #include <FileSystem.h>
 #include <Partitioner2/Function.h>
@@ -516,7 +520,7 @@ public:
     /** Determine whether a specimen is an RBA file.
      *
      *  Returns true if the name looks like a ROSE Binary Analysis file. Such files are not intended to be passed to ROSE's
-     *  @c frontend function. */
+     *  global @c ::frontend function but may be passed to this Engine's @ref frontent method. */
     virtual bool isRbaFile(const std::string&);
 
     /** Determine whether a specimen name is a non-container.
@@ -531,6 +535,12 @@ public:
      *  @ref parseContainers might have already been called but no binary containers specified, in which case calling it again
      *  with the same file names will have no effect. */
     virtual bool areContainersParsed() const;
+
+    /** Parses a vxcore specification and initializes memory.
+     *
+     *  Parses a VxWorks core dump in the format defined by Jim Leek and loads the data into ROSE's analysis memory. The argument
+     *  should be everything after the first colon in the URL "vxcore:[MEMORY_ATTRS]:[FILE_ATTRS]:FILE_NAME". */
+    virtual void loadVxCore(const std::string &spec);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //                                  Load specimens
@@ -692,7 +702,7 @@ public:
      *
      *  Labels addresses according to symbols, etc.  Address labels are used for things like giving an unnamed function a name
      *  when it's attached to the partitioner's CFG/AUM. */
-    virtual void labelAddresses(Partitioner&);
+    virtual void labelAddresses(Partitioner&, const Configuration&);
 
     /** Make data blocks based on configuration.
      *
@@ -1132,6 +1142,36 @@ public:
     virtual void linkerCommand(const std::string &cmd) { settings_.loader.linker = cmd; }
     /** @} */
 
+    /** Property: Environment variable erasure names.
+     *
+     *  This property is a list of environment variable names that will be removed before launching a "run:" style specimen.
+     *
+     * @{ */
+    const std::vector<std::string> environmentEraseNames() const /*final*/ { return settings_.loader.envEraseNames; }
+    virtual void environmentEraseNames(const std::vector<std::string> &names) { settings_.loader.envEraseNames = names; }
+    /** @} */
+
+    /** Property: Environment variable erasure patterns.
+     *
+     *  This property is a list of regular expressions that will erase matching environment variable names before launching
+     *  a "run:" style specimen.
+     *
+     * @{ */
+    const std::vector<boost::regex> environmentErasePatterns() const /*final*/ { return settings_.loader.envErasePatterns; }
+    virtual void environmentErasePatterns(const std::vector<boost::regex> &res) { settings_.loader.envErasePatterns = res; }
+    /** @} */
+
+    /** Property: Environment variables to insert.
+     *
+     *  This property is a list of environment variables and values to insert before launching a "run:" style
+     *  specimen. Insertions always occur after all environment variable erasures have been processed.  Each string must
+     *  contain at least one equal sign ("="), the first of which separates the variable name from its value.
+     *
+     * @{ */
+    const std::vector<std::string> environmentInsertions() const /*final*/ { return settings_.loader.envInsert; }
+    virtual void environmentInsertions(const std::vector<std::string> &vars) { settings_.loader.envInsert = vars; }
+    /** @} */
+
     /** Property: Disassembler.
      *
      *  This property holds the disassembler to use whenever a new partitioner is created. If null, then the engine will choose
@@ -1152,14 +1192,20 @@ public:
     virtual void isaName(const std::string &s) { settings_.disassembler.isaName = s; }
     /** @} */
 
+    // This is a list of addresses where functions will be created in addition to those functions discovered by examining the
+    // binary container. Use functionStartingVas instead.
+    // DEPRECATED on 5/27/20
+    const std::vector<rose_addr_t>& startingVas() const ROSE_DEPRECATED("use functionStartingVas") /*final*/ { return settings_.partitioner.functionStartingVas; }
+    std::vector<rose_addr_t>& startingVas() ROSE_DEPRECATED("use functionStartingVas") /*final*/ { return settings_.partitioner.functionStartingVas; }
+
     /** Property: Starting addresses for disassembly.
      *
      *  This is a list of addresses where functions will be created in addition to those functions discovered by examining the
      *  binary container.
      *
      * @{ */
-    const std::vector<rose_addr_t>& startingVas() const /*final*/ { return settings_.partitioner.startingVas; }
-    std::vector<rose_addr_t>& startingVas() /*final*/ { return settings_.partitioner.startingVas; }
+    const std::vector<rose_addr_t>& functionStartingVas() const /*final*/ { return settings_.partitioner.functionStartingVas; }
+    std::vector<rose_addr_t>& functionStartingVas() /*final*/ { return settings_.partitioner.functionStartingVas; }
     /** @} */
 
     /** Property: Whether to use instruction semantics.
@@ -1172,6 +1218,18 @@ public:
     virtual void usingSemantics(bool b) { settings_.partitioner.base.usingSemantics = b; }
     /** @} */
 
+    /** Property: Whether unknown instructions are ignored.
+     *
+     *  If set, then instructions that cannot be disassembled are treated like no-ops for the purpose of building the global
+     *  control flow graph (otherwise they terminate a basic block). This is useful when working with fixed-width instruction
+     *  set architectures for which ROSE has an incomplete disassembler. For instance, PowerPC architectures that are augmented
+     *  with additional undocumented co-processor instructions.
+     *
+     * @{ */
+    bool ignoringUnknownInsns() const /*final*/ { return settings_.partitioner.base.ignoringUnknownInsns; }
+    virtual void ignoringUnknownInsns(bool b) { settings_.partitioner.base.ignoringUnknownInsns = b; }
+    /** @} */
+
     /** Property: Type of container for semantic memory.
      *
      *  Determines whether @ref Partitioner objects created by this engine will be configured to use list-based or map-based
@@ -1182,12 +1240,30 @@ public:
     virtual void semanticMemoryParadigm(SemanticMemoryParadigm p) { settings_.partitioner.semanticMemoryParadigm = p; }
     /** @} */
 
-    /**  Property: Whether to follow ghost edges.
+    /** Property: Whether to follow ghost edges.
      *
-     *   If set, then "ghost" edges are followed during disassembly.  A ghost edge is a control flow edge from a branch
-     *   instruction where the partitioner has decided according to instruction semantics that the branch cannot be taken at
-     *   run time.  If semantics are disabled then ghost edges are always followed since its not possible to determine whether
-     *   an edge is a ghost edge.
+     *  A "ghost edge" is a control flow graph (CFG) edge that would be present if the CFG-building analysis looked only
+     *  at individual instructions, but would be absent when the analysis considers coarser units of code.  For instance,
+     *  consider the following x86 instructions:
+     *
+     * @code
+     *  1: mov eax, 0
+     *  2: cmp eax, 0
+     *  3: jne 5
+     *  4: nop
+     *  5: hlt
+     * @endcode
+     *
+     *  If the analysis looks only at instruction 3, then it appears to have two CFG successors: instructions 4 and 5. But if
+     *  the analysis looks at the first three instructions collectively it will ascertain that instruction 3 has an opaque
+     *  predicate, that the only valid CFG successor is instruction 4, and that the edge from 3 to 5 is a \"ghost\". In fact,
+     *  if there are no other incoming edges to these instructions, then instructions 1 through 4 will form a basic block with
+     *  the (unconditional) branch instruction in its interior.  The ability to look at larger units of code than single
+     *  instructions is controlled by the @ref usingSemantics property.
+     *
+     *  If this @ref followingGhostEdges property is true then ghost edges will be added back into the CFG as real edges,
+     *  which might force a basic block to end, as in this example, at the branch instruction and may attempt to disassemble
+     *  additional code by folowing all edges.
      *
      * @{ */
     bool followingGhostEdges() const /*final*/ { return settings_.partitioner.followingGhostEdges; }
@@ -1284,8 +1360,10 @@ public:
 
     /** Property: Whether to find dead code.
      *
-     *  If set, then the partitioner looks for code that is reachable by ghost edges after all other code has been found.  This
-     *  is different than @ref followingGhostEdges in that the former follows those edges immediately.
+     *  If ghost edges are being discovered (see @ref usingSemantics and @ref followingGhostEdges) and are not being inserted
+     *  into the global CFG, then the target address of the ghost edges might not be used as code addresses during the code
+     *  discovery phase.  This property, when true, will cause the target address of ghost edges to be used to discover additional
+     *  instructions even if they have no incoming CFG edges.
      *
      * @{ */
     bool findingDeadCode() const /*final*/ { return settings_.partitioner.findingDeadCode; }
@@ -1649,4 +1727,5 @@ private:
 } // namespace
 } // namespace
 
+#endif
 #endif

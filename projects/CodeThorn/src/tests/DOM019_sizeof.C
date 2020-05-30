@@ -1,13 +1,12 @@
-
-int f(int a) {
-  return a+1;
-}
+#include <cstdio>
+#include "DOM.h"
 
 int main() {
   int x;
   x=sizeof(int);
-  x=x+sizeof(x);
-  x=f(x);
+  printf("%d\n",x);
+  x=sizeof(x);
+  printf("%d\n",x);
   return 0;
 }
   

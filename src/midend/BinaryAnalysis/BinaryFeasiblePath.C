@@ -1,4 +1,7 @@
+#include <rosePublicConfig.h>
+#ifdef ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
 #include <sage3basic.h>
+
 #include <AsmUnparser_compat.h>
 #include <BaseSemantics2.h>
 #include <BinaryFeasiblePath.h>
@@ -255,10 +258,10 @@ private:
         FeasiblePath::VarDetail retval;
         retval.registerName = RegisterNames(regs)(reg);
         retval.firstAccessMode = accessMode;
-        if (pathInsnIndex_ == (size_t)(-1) && currentInstruction() == NULL) {
+        if (pathInsnIndex_ == INVALID_INDEX && currentInstruction() == NULL) {
             // no path position (i.e., present in initial state)
         } else {
-            if (pathInsnIndex_ != (size_t)(-1))
+            if (pathInsnIndex_ != INVALID_INDEX)
                 retval.firstAccessIdx = pathInsnIndex_;
             retval.firstAccessInsn = currentInstruction();
         }
@@ -271,7 +274,7 @@ private:
                                               const std::string &accessMode, size_t byteNumber=0, size_t nBytes=0) const {
         FeasiblePath::VarDetail retval;
         retval.firstAccessMode = accessMode;
-        if (pathInsnIndex_ != (size_t)(-1))
+        if (pathInsnIndex_ != INVALID_INDEX)
             retval.firstAccessIdx = pathInsnIndex_;
         retval.firstAccessInsn = currentInstruction();
 
@@ -348,11 +351,11 @@ private:
         switch (fpAnalyzer_->settings().nullDeref.mode) {
             case FeasiblePath::MAY:
                 if (solver) {
-                    SymbolicExpr::Ptr assertion = SymbolicExpr::makeEq(expr, SymbolicExpr::makeIntegerConstant(expr->nBits(), 0));
+                    SymbolicExpr::Ptr assertion = SymbolicExpr::makeLt(expr, SymbolicExpr::makeIntegerConstant(expr->nBits(), fpAnalyzer_->settings().nullDeref.minValid));
                     solver->insert(assertion);
                     retval = SmtSolver::SAT_YES == solver->check();
                 } else {
-                    retval = expr->mayEqual(SymbolicExpr::makeIntegerConstant(expr->nBits(), 0));
+                    retval = SymbolicExpr::makeLt(expr, SymbolicExpr::makeIntegerConstant(expr->nBits(), fpAnalyzer_->settings().nullDeref.minValid))->mayEqual(SymbolicExpr::makeIntegerConstant(expr->nBits(), 1));
                 }
                 break;
 
@@ -361,11 +364,11 @@ private:
                 // be able to return quickly.
                 if (!fpAnalyzer_->settings().nullDeref.constOnly ||  isConstExpr(expr)) {
                     if (solver) {
-                        SymbolicExpr::Ptr assertion = SymbolicExpr::makeNe(expr, SymbolicExpr::makeIntegerConstant(expr->nBits(), 0));
+                        SymbolicExpr::Ptr assertion = SymbolicExpr::makeGe(expr, SymbolicExpr::makeIntegerConstant(expr->nBits(), fpAnalyzer_->settings().nullDeref.minValid));
                         solver->insert(assertion);
                         retval = SmtSolver::SAT_NO == solver->check();
                     } else {
-                        retval = expr->mustEqual(SymbolicExpr::makeIntegerConstant(expr->nBits(), 0));
+                        retval = SymbolicExpr::makeLt(expr, SymbolicExpr::makeIntegerConstant(expr->nBits(), fpAnalyzer_->settings().nullDeref.minValid))->mustEqual(SymbolicExpr::makeIntegerConstant(expr->nBits(), 1));
                     }
                 } else {
                     SAWYER_MESG(debug) <<"          isNullDeref address is not constant as required by settings\n";
@@ -444,7 +447,8 @@ public:
                 ASSERT_not_null(path_);
                 BaseSemantics::RiscOperatorsPtr cpu = shared_from_this();
                 ASSERT_not_null(cpu);
-                pathProcessor_->nullDeref(*fpAnalyzer_, *path_, cpu, nullPtrSolver(), FeasiblePath::READ, addr, currentInstruction());
+                pathProcessor_->nullDeref(*fpAnalyzer_, *path_, currentInstruction(), cpu, nullPtrSolver(),
+                                          FeasiblePath::READ, addr);
             }
         }
         
@@ -500,7 +504,7 @@ public:
             SmtSolver::Transaction tx(s);
             BaseSemantics::RiscOperatorsPtr cpu = shared_from_this();
             ASSERT_not_null(cpu);
-            pathProcessor_->memoryIo(*fpAnalyzer_, *path_, cpu, s, FeasiblePath::READ, addr, retval);
+            pathProcessor_->memoryIo(*fpAnalyzer_, *path_, currentInstruction(), cpu, s, FeasiblePath::READ, addr, retval);
         }
 
         return retval;
@@ -523,7 +527,8 @@ public:
                 ASSERT_not_null(path_);
                 BaseSemantics::RiscOperatorsPtr cpu = shared_from_this();
                 ASSERT_not_null(cpu);
-                pathProcessor_->nullDeref(*fpAnalyzer_, *path_, cpu, nullPtrSolver(), FeasiblePath::WRITE, addr, currentInstruction());
+                pathProcessor_->nullDeref(*fpAnalyzer_, *path_, currentInstruction(), cpu, nullPtrSolver(),
+                                          FeasiblePath::WRITE, addr);
             }
         }
 
@@ -550,7 +555,7 @@ public:
             SmtSolver::Transaction tx(s);
             BaseSemantics::RiscOperatorsPtr cpu = shared_from_this();
             ASSERT_not_null(cpu);
-            pathProcessor_->memoryIo(*fpAnalyzer_, *path_, cpu, s, FeasiblePath::WRITE, addr, value);
+            pathProcessor_->memoryIo(*fpAnalyzer_, *path_, currentInstruction(), cpu, s, FeasiblePath::WRITE, addr, value);
         }
     }
 };
@@ -692,12 +697,20 @@ FeasiblePath::commandLineSwitches(Settings &settings) {
                    "Exploration along a path stops when any of these limits is met. The default maximum path length is " +
                    StringUtility::plural(settings.maxPathLength, "instructions") + "."));
 
+    sg.insert(Switch("max-expression-size")
+              .argument("n", nonNegativeIntegerParser(settings.maxExprSize))
+              .doc("Maximum size of symbolic expressions, measured in number of nodes of the expression tree, before the "
+                   "expression is replaced with a new free variable. This can make the analysis faster but less precise. "
+                   "See also, @s{smt-timeout}.  The default is " +
+                   boost::lexical_cast<std::string>(settings.maxExprSize) + "."));
+
     sg.insert(Switch("cycle-k")
               .argument("coefficent", realNumberParser(settings.kCycleCoefficient))
               .doc("When the algorithm encounters a vertex which has already been visited by the current path, then the "
                    "effective k value is adjusted. The amount of adjustment is the size of the vertex (e.g., number of "
-                   "instructions) multiplied by the @v{coefficient} specified here. Both positive and negative coefficients "
-                   "are permitted. The default is " + boost::lexical_cast<std::string>(settings.kCycleCoefficient) + "."));
+                   "instructions) multiplied by the floating-point @v{coefficient} specified here. Both positive and "
+                   "negative coefficients are permitted. The default is " +
+                   boost::lexical_cast<std::string>(settings.kCycleCoefficient) + "."));
 
     sg.insert(Switch("max-call-depth")
               .argument("n", nonNegativeIntegerParser(settings.maxCallDepth))
@@ -738,8 +751,16 @@ FeasiblePath::commandLineSwitches(Settings &settings) {
     sg.insert(Switch("smt-solver")
                .argument("name", anyParser(settings.solverName))
                .doc("When analyzing paths for model checking, use this SMT solver.  This switch overrides the general, "
-                    "global SMT solver. Since an SMT solver is required for model checking, in the absense of any specified "
+                    "global SMT solver. Since an SMT solver is required for model checking, in the absence of any specified "
                     "solver the \"best\" solver is used.  The default solver is \"" + settings.solverName + "\"."));
+
+    sg.insert(Switch("smt-timeout")
+              .argument("seconds", realNumberParser(settings.smtTimeout))
+              .doc("Amount of time in seconds (fractional values allowed) that the SMT solver is allowed to work on any "
+                   "particular system of equations.  See also, @s{max-expression-size}. The default is " +
+                   (settings.smtTimeout && settings.smtTimeout->count() > 0 ?
+                    boost::lexical_cast<std::string>(*settings.smtTimeout) + " seconds" :
+                    std::string("no limit")) + "."));
 
     CommandLine::insertBooleanSwitch(sg, "null-derefs", settings.nullDeref.check,
                                      "Check for null dereferences along the paths.");
@@ -757,6 +778,13 @@ FeasiblePath::commandLineSwitches(Settings &settings) {
                                      "Check for null dereferences only when a pointer is a constant or set of constants. This "
                                      "setting is ignored when the null-comparison mode is \"may\" since \"may\" implies that "
                                      "you're interested in additional cases where the pointer is not a constant expression.");
+
+    sg.insert(Switch("null-address-min")
+              .argument("n", nonNegativeIntegerParser(settings.nullDeref.minValid))
+              .doc("What is the min address that should not be teated as a null dereference. All memory reads that are less than n "
+                   " are considered a null dereference. This is to find when an offset is used on a null pointer such as accessing "
+                   "a member of a structure. The default is " + boost::lexical_cast<std::string>(settings.nullDeref.minValid) + " which is the default "
+                   "size of the first page on linux which can not be read from."));
 
     CommandLine::insertBooleanSwitch(sg, "ignore-semantic-failure", settings.ignoreSemanticFailure,
                                      "If set, then any instruction for which semantics are not implemented or for which the "
@@ -817,13 +845,13 @@ FeasiblePath::buildVirtualCpu(const P2::Partitioner &partitioner, const P2::CfgP
         // Where are return values stored?  FIXME[Robb Matzke 2015-12-01]: We need to support returning multiple values. We
         // should be using the new calling convention analysis to detect these.
         ASSERT_require(REG_RETURN_.isEmpty());
-        const RegisterDescriptor *r = NULL;
-        if ((r = registers_->lookup("rax")) || (r = registers_->lookup("eax")) || (r = registers_->lookup("ax"))) {
-            REG_RETURN_ = *r;
-        } else if ((r = registers_->lookup("d0"))) {
-            REG_RETURN_ = *r;                           // m68k also typically has other return registers
-        } else if ((r = registers_->lookup("r3"))) {
-            REG_RETURN_ = *r;                           // PowerPC also returns via r4
+        RegisterDescriptor r;
+        if ((r = registers_->find("rax")) || (r = registers_->find("eax")) || (r = registers_->find("ax"))) {
+            REG_RETURN_ = r;
+        } else if ((r = registers_->find("d0"))) {
+            REG_RETURN_ = r;                            // m68k also typically has other return registers
+        } else if ((r = registers_->find("r3"))) {
+            REG_RETURN_ = r;                            // PowerPC also returns via r4
         } else {
             ASSERT_not_implemented("function return value register is not implemented for this ISA/ABI");
         }
@@ -831,6 +859,7 @@ FeasiblePath::buildVirtualCpu(const P2::Partitioner &partitioner, const P2::CfgP
 
     // Create the RiscOperators and Dispatcher.
     RiscOperatorsPtr ops = RiscOperators::instance(&partitioner, registers_, this, path, pathProcessor);
+    ops->trimThreshold(settings_.maxExprSize);
     ops->initialState(ops->currentState()->clone());
     ops->nullPtrSolver(solver);
     for (size_t i = 0; i < settings().ipRewrite.size(); i += 2) {
@@ -879,8 +908,10 @@ FeasiblePath::setInitialState(const BaseSemantics::DispatcherPtr &cpu,
     }
 
     // Direction flag (DF) is always set
-    if (const RegisterDescriptor *REG_DF = cpu->get_register_dictionary()->lookup("df"))
-        ops->writeRegister(*REG_DF, ops->boolean_(true));
+    if (const RegisterDescriptor REG_DF = cpu->get_register_dictionary()->findOrThrow("df"))
+        ops->writeRegister(REG_DF, ops->boolean_(true));
+
+    initialState_ = ops->currentState()->clone();
 }
 
 /** Process instructions for one basic block on the specified virtual CPU. */
@@ -1052,7 +1083,7 @@ FeasiblePath::printPathVertex(std::ostream &out, const P2::ControlFlowGraph::Ver
         case P2::V_BASIC_BLOCK: {
             BOOST_FOREACH (SgAsmInstruction *insn, pathVertex.value().bblock()->instructions()) {
                 out <<"    #" <<std::setw(5) <<std::left <<insnIdx++
-                    <<" " <<unparseInstructionWithAddress(insn) <<"\n";
+                    <<" " <<partitioner_->unparse(insn) <<"\n";
             }
             break;
         }
@@ -1270,8 +1301,10 @@ FeasiblePath::shouldInline(const P2::CfgPath &path, const P2::ControlFlowGraph::
     // Don't let the call depth get too deep
     ssize_t callDepth = path.callDepth();
     ASSERT_require(callDepth >= 0);
-    if ((size_t)callDepth >= settings_.maxCallDepth)
+    if ((size_t)callDepth >= settings_.maxCallDepth) {
+        ++stats_.maxCallDepthHits;
         return false;
+    }
 
     // Don't inline if there's no function
     if (cfgCallTarget->value().type() != P2::V_BASIC_BLOCK)
@@ -1281,11 +1314,13 @@ FeasiblePath::shouldInline(const P2::CfgPath &path, const P2::ControlFlowGraph::
         return false;
 
     // Don't let recursion get too deep
-    if (settings_.maxRecursionDepth < (size_t)(-1)) {
+    if (settings_.maxRecursionDepth < UNLIMITED) {
         ssize_t callDepth = path.callDepth(callee);
         ASSERT_require(callDepth >= 0);
-        if ((size_t)callDepth >= settings_.maxRecursionDepth)
+        if ((size_t)callDepth >= settings_.maxRecursionDepth) {
+            ++stats_.maxRecursionDepthHits;
             return false;
+        }
     }
 
     // Don't inline imported functions that aren't linked -- we'd just get bogged down deep inside the
@@ -1357,6 +1392,11 @@ FeasiblePath::isAnyEndpointReachable(const P2::ControlFlowGraph &cfg,
             return true;
     }
     return false;
+}
+
+BaseSemantics::StatePtr
+FeasiblePath::initialState() const {
+    return initialState_;
 }
 
 BaseSemantics::StatePtr
@@ -1535,19 +1575,19 @@ FeasiblePath::depthFirstSearch(PathProcessor &pathProcessor) {
     }
 
     Stream debug(mlog[DEBUG]);
-    Stream info(mlog[INFO]);
+    Stream trace(mlog[TRACE]);
     std::string indent = debug ? "    " : "";
     if (paths_.isEmpty())
         return;
 
     // Debugging
-    if (debug) {
-        debug <<"depthFirstSearch call #" <<callId <<":\n";
-        debug <<"  paths graph saved in " <<emitPathGraph(callId, graphId) <<"\n";
+    if (trace || debug) {
+        SAWYER_MESG_OR(trace, debug) <<"depthFirstSearch call #" <<callId <<":\n";
+        SAWYER_MESG_OR(trace, debug) <<"  paths graph saved in " <<emitPathGraph(callId, graphId) <<"\n";
         BOOST_FOREACH (const P2::ControlFlowGraph::ConstVertexIterator &v, pathsBeginVertices_.values())
-            debug <<"  begin at vertex " <<partitioner().vertexName(v) <<"\n";
+            SAWYER_MESG_OR(trace, debug) <<"  begin at vertex " <<partitioner().vertexName(v) <<"\n";
         BOOST_FOREACH (const P2::ControlFlowGraph::ConstVertexIterator &v, pathsEndVertices_.values())
-            debug <<"  end   at vertex " <<partitioner().vertexName(v) <<"\n";
+            SAWYER_MESG_OR(trace, debug) <<"  end   at vertex " <<partitioner().vertexName(v) <<"\n";
     }
 
     const RegisterDescriptor IP = partitioner().instructionProvider().instructionPointerRegister();
@@ -1567,12 +1607,17 @@ FeasiblePath::depthFirstSearch(PathProcessor &pathProcessor) {
 
     // Analyze each of the starting locations individually
     BOOST_FOREACH (P2::ControlFlowGraph::ConstVertexIterator pathsBeginVertex, pathsBeginVertices_.values()) {
+        Sawyer::ProgressBar<size_t> progress(std::min(settings_.maxPathLength, (size_t)5000 /*arbitrary*/), mlog[MARCH], "path");
+        progress.suffix(" vertices");
+
         // Create the SMT solver.  The solver will have one initial state, plus one additional state pushed for each edge of
         // the current path.
         SmtSolverPtr solver = SmtSolver::instance(settings_.solverName);
         ASSERT_always_not_null(solver);
         solver->errorIfReset(true);
         solver->name("FeasiblePath " + solver->name());
+        if (settings_.smtTimeout)
+            solver->timeout(*settings_.smtTimeout);
 #if 1 // DEBUGGING [Robb Matzke 2018-11-14]
         solver->memoization(false);
 #endif
@@ -1593,6 +1638,7 @@ FeasiblePath::depthFirstSearch(PathProcessor &pathProcessor) {
 
         while (!path.isEmpty()) {
             size_t pathNInsns = pathLength(path);
+            progress.value(pathNInsns);
 
             if (debug) {
                 debug <<"  path vertices (" <<path.nVertices() <<"):";
@@ -1737,8 +1783,9 @@ FeasiblePath::depthFirstSearch(PathProcessor &pathProcessor) {
             // If we've visited a vertex too many times (e.g., because of a loop or recursion), then don't go any further.
             size_t nVertexVisits = path.nVisits(backVertex);
             if (nVertexVisits > settings_.maxVertexVisit) {
-                SAWYER_MESG(mlog[WARN]) <<indent <<"max visits (" <<settings_.maxVertexVisit <<") reached"
+                SAWYER_MESG(mlog[TRACE]) <<indent <<"max visits (" <<settings_.maxVertexVisit <<") reached"
                                         <<" for vertex " <<partitioner().vertexName(backVertex) <<"\n";
+                ++stats_.maxVertexVisitHits;
                 doBacktrack = true;
             } else if (nVertexVisits > 1 && !rose_isnan(settings_.kCycleCoefficient)) {
                 size_t n = vertexSize(backVertex);
@@ -1754,10 +1801,11 @@ FeasiblePath::depthFirstSearch(PathProcessor &pathProcessor) {
             // Limit path length (in terms of number of instructions)
             if (!doBacktrack) {
                 if ((double)pathNInsns > effectiveMaxPathLength) {
-                    SAWYER_MESG(mlog[WARN]) <<indent <<"maximum path length exceeded:"
-                                            <<" path length is " <<StringUtility::plural(pathNInsns, "instructions")
-                                            <<", effective limit is " <<effectiveMaxPathLength
-                                            <<" at vertex " <<partitioner().vertexName(backVertex) <<"\n";
+                    SAWYER_MESG(trace) <<indent <<"maximum path length exceeded:"
+                                       <<" path length is " <<StringUtility::plural(pathNInsns, "instructions")
+                                       <<", effective limit is " <<effectiveMaxPathLength
+                                       <<" at vertex " <<partitioner().vertexName(backVertex) <<"\n";
+                    ++stats_.maxPathLengthHits;
                     doBacktrack = true;
                 }
             }
@@ -1771,10 +1819,11 @@ FeasiblePath::depthFirstSearch(PathProcessor &pathProcessor) {
                 P2::CfgConstEdgeSet callEdges = P2::findCallEdges(cfgBackVertex);
                 BOOST_FOREACH (const P2::ControlFlowGraph::ConstEdgeIterator &cfgCallEdge, callEdges.values()) {
                     if (shouldSummarizeCall(path.backVertex(), partitioner().cfg(), cfgCallEdge->target())) {
-                        info <<indent <<"summarizing function for edge " <<partitioner().edgeName(cfgCallEdge) <<"\n";
+                        SAWYER_MESG(debug) <<indent <<"summarizing function for edge " <<partitioner().edgeName(cfgCallEdge) <<"\n";
                         insertCallSummary(backVertex, partitioner().cfg(), cfgCallEdge);
                     } else if (shouldInline(path, cfgCallEdge->target())) {
-                        info <<indent <<"inlining function call paths at vertex " <<partitioner().vertexName(backVertex) <<"\n";
+                        SAWYER_MESG(debug) <<indent <<"inlining function call paths at vertex "
+                                           <<partitioner().vertexName(backVertex) <<"\n";
                         if (cfgCallEdge->target()->value().type() == P2::V_INDETERMINATE &&
                             cfgBackVertex->value().type() == P2::V_BASIC_BLOCK) {
                             // If the CFG has a vertex to an indeterminate function (e.g., from "call eax"), then instead of
@@ -1804,7 +1853,7 @@ FeasiblePath::depthFirstSearch(PathProcessor &pathProcessor) {
                                                       cfgBackVertex, cfgEndAvoidVertices_, cfgAvoidEdges_);
                         }
                     } else {
-                        info <<indent <<"summarizing function for edge " <<partitioner().edgeName(cfgCallEdge) <<"\n";
+                        SAWYER_MESG(debug) <<indent <<"summarizing function for edge " <<partitioner().edgeName(cfgCallEdge) <<"\n";
                         insertCallSummary(backVertex, partitioner().cfg(), cfgCallEdge);
                     }
                 }
@@ -1826,8 +1875,8 @@ FeasiblePath::depthFirstSearch(PathProcessor &pathProcessor) {
                 backVertex = path.backVertex();
                 cfgBackVertex = pathToCfg(backVertex);
 
-                info <<indent <<"paths graph has " <<StringUtility::plural(paths_.nVertices(), "vertices", "vertex")
-                     <<" and " <<StringUtility::plural(paths_.nEdges(), "edges") <<"\n";
+                SAWYER_MESG(debug) <<indent <<"paths graph has " <<StringUtility::plural(paths_.nVertices(), "vertices")
+                                   <<" and " <<StringUtility::plural(paths_.nEdges(), "edges") <<"\n";
                 SAWYER_MESG(debug) <<"    paths graph saved in " <<emitPathGraph(callId, ++graphId) <<"\n";
             }
 
@@ -1836,7 +1885,7 @@ FeasiblePath::depthFirstSearch(PathProcessor &pathProcessor) {
             if (doBacktrack || backVertex->nOutEdges() == 0) {
                 // Backtrack and follow a different path.  The backtrack not only pops edges off the path, but then also appends
                 // the next edge.  We must adjust visit counts for the vertices we backtracked.
-                SAWYER_MESG(debug) <<"    backtrack\n";
+                SAWYER_MESG_OR(trace, debug) <<"    backtrack\n";
                 backtrack(path, solver);
                 if (!path.isEmpty()) {
                     double d = pathEffectiveK(path);
@@ -1847,7 +1896,8 @@ FeasiblePath::depthFirstSearch(PathProcessor &pathProcessor) {
                 }
             } else {
                 // Push next edge onto path.
-                SAWYER_MESG(debug) <<"    advance along cfg edge " <<partitioner().edgeName(backVertex->outEdges().begin()) <<"\n";
+                SAWYER_MESG_OR(trace, debug) <<"    advance along cfg edge "
+                                             <<partitioner().edgeName(backVertex->outEdges().begin()) <<"\n";
                 ASSERT_require(paths_.isValidEdge(backVertex->outEdges().begin()));
                 typedef P2::ControlFlowGraph::ConstEdgeIterator CEI;
                 std::vector<CEI> outEdges;
@@ -1868,7 +1918,7 @@ FeasiblePath::depthFirstSearch(PathProcessor &pathProcessor) {
             }
         }
     }
-    SAWYER_MESG(debug) <<"  path search completed\n";
+    SAWYER_MESG_OR(trace, debug) <<"  path search completed\n";
 }
 
 const FeasiblePath::FunctionSummary&
@@ -1932,3 +1982,5 @@ std::ostream& operator<<(std::ostream &out, const Rose::BinaryAnalysis::Feasible
     expr.print(out);
     return out;
 }
+
+#endif

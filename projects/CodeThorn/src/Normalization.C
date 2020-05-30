@@ -2,6 +2,7 @@
 #include "SingleStatementToBlockNormalization.h"
 
 #include "Normalization.h"
+#include "NormalizationCxx.h"
 #include "RoseAst.h"
 #include "SgNodeHelper.h"
 #include "CFAnalysis.h"
@@ -13,6 +14,8 @@
 #include "astPostProcessing.h"
 
 #include "Diagnostics.h"
+#include "sageGeneric.h"
+
 using namespace Sawyer::Message;
 
 // Author: Markus Schordan, 2018
@@ -73,10 +76,10 @@ namespace CodeThorn {
       hoistConditionExpressions=true;
 
       // obsolete, replaces initializers with assignments
-      normalizeVariableDeclarations=false; 
+      normalizeVariableDeclarations=false;
 
       // obsolete
-      normalizeVariableDeclarationsWithFunctionCalls=false; 
+      normalizeVariableDeclarationsWithFunctionCalls=false;
 
       eliminateShortCircuitOperators=true;
       //eliminateConditionalExpressionOp=true;
@@ -109,9 +112,14 @@ namespace CodeThorn {
     exit(1);
   }
 
+  void Normalization::normalizeAst(SgNode* root) {
+    options.configureLevel(2); // default level of normalization
+    normalizeAstPhaseByPhase(root);
+  }
+
   void Normalization::normalizeAst(SgNode* root, unsigned int level) {
     options.configureLevel(level);
-    normalizeAst(root);
+    normalizeAstPhaseByPhase(root);
 #if 0
     // AST consistency tests
     if(SgProject* project=isSgProject(root)) {
@@ -121,7 +129,10 @@ namespace CodeThorn {
 #endif
   }
 
-  void Normalization::normalizeAst(SgNode* root) {
+  void Normalization::normalizeAstPhaseByPhase(SgNode* root) {
+    if (options.normalizeCplusplus) {
+      normalizeCxx(*this, root);
+    }
     if(options.normalizeSingleStatements) {
       normalizeSingleStatementsToBlocks(root);
     }
@@ -139,6 +150,9 @@ namespace CodeThorn {
       // transforms while and do-while loops
       createLoweringSequence(root);
       applyLoweringSequence();
+    }
+    if(options.hoistBranchInitStatements) {
+      hoistBranchInitStatementsInAst(root);
     }
     if(options.hoistConditionExpressions) {
       hoistConditionsInAst(root,options.restrictToFunCallExpressions);
@@ -214,7 +228,7 @@ namespace CodeThorn {
     };
     return isSgBasicBlock(current);
   }
-  
+
   bool Normalization::hasFunctionCall(SgExpression* expr) {
     RoseAst ast(expr);
     for(auto node:ast) {
@@ -236,7 +250,7 @@ namespace CodeThorn {
   bool Normalization::getInliningOption() {
     return options.inlining;
   }
-  
+
   void Normalization::removeDefaultInliner() {
     if(_defaultInliner) {
       delete _inliner;
@@ -303,7 +317,7 @@ namespace CodeThorn {
     DeclAssignListType declAssignList;
     for(RoseAst::iterator i=ast.begin();i!=ast.end();++i) {
       SgNode* node=*i;
-      if(SgVariableDeclaration* varDecl=isSgVariableDeclaration(node)) { 
+      if(SgVariableDeclaration* varDecl=isSgVariableDeclaration(node)) {
         // do not transform assignments to static variables (must remain initializations because of different semantics)
         if(!SageInterface::isStatic(varDecl)) {
           if(onlyFunctionCalls) {
@@ -343,7 +357,7 @@ namespace CodeThorn {
       if(declInitializer) {
         SgInitializedName* declInitName=SgNodeHelper::getInitializedNameOfVariableDeclaration(varDecl);
         // detach initializer from declaration such that is has no initializer
-        varDecl->reset_initializer(0); 
+        varDecl->reset_initializer(0);
         // build new variable
         SgVarRefExp* declVarRefExp=SageBuilder::buildVarRefExp(declInitName,varDecl->get_declarationScope());
         // build assignment with new variable and initializer from original declaration
@@ -378,6 +392,117 @@ namespace CodeThorn {
     return labelPrefix + StringUtility::numberToString(Normalization::labelNr++);
   }
 
+  SgClassDeclaration* Normalization::isSpecialization(SgNode* node) {
+    if(SgClassDeclaration* classDecl=isSgClassDeclaration(node)) {
+      if(classDecl->isSpecialization()) {
+        return classDecl;
+      }
+    }
+    return 0;
+  }
+
+  bool Normalization::isTemplateInstantiationNode(SgNode* node) {
+    return RoseAst::isTemplateInstantiationNode(node);
+  }
+
+  bool Normalization::isTemplateNode(SgNode* node) {
+    return RoseAst::isTemplateNode(node);
+  }
+
+  /***************************************************************************
+   * HOISTING OF INIT STATEMENTS (if, switch)
+   **************************************************************************/
+
+struct GetInitStatement
+{
+    typedef std::pair<SgVariableDeclaration*, SgScopeStatement*> matched_node;
+    typedef std::vector<matched_node>                            container;
+
+    explicit
+    GetInitStatement(container& results)
+    : res(results)
+    {}
+
+    void handleInitStatement(SgStatement& init, SgScopeStatement& branch);
+
+    void handle(SgNode&) {}
+
+    void handle(SgIfStmt& n)
+    {
+      handleInitStatement(SG_DEREF(n.get_conditional()), n);
+    }
+
+    void handle(SgSwitchStatement& n)
+    {
+      handleInitStatement(SG_DEREF(n.get_item_selector()), n);
+    }
+
+  private:
+    container& res;
+};
+
+void GetInitStatement::handleInitStatement(SgStatement& init, SgScopeStatement& branch)
+{
+  SgVariableDeclaration* var = isSgVariableDeclaration(&init);
+
+  // \todo handle C++17 init statements
+  if (var == nullptr) return;
+
+  res.push_back(std::make_pair(var, &branch));
+}
+
+struct SetBranchCondition
+{
+  void handle(SgNode& n)            { SG_UNEXPECTED_NODE(n); }
+  void handle(SgIfStmt& n)          { n.set_conditional(cond); }
+  void handle(SgSwitchStatement& n) { n.set_item_selector(cond); }
+
+  SgExprStatement* cond;
+};
+
+
+
+static
+void hoistBranchInitStatement(GetInitStatement::matched_node n)
+{
+  SgBasicBlock*    block = SageBuilder::buildBasicBlock();
+
+  SageInterface::replaceStatement(n.second /*branch*/, block);
+  block->append_statement(n.second);
+  SageInterface::moveVariableDeclaration(n.first /*var decl*/, block);
+
+  SgExpression*    cond = SageBuilder::buildVarRefExp(n.first);
+  ROSE_ASSERT(cond);
+
+  SgExprStatement* stmt = SageBuilder::buildExprStatement(cond);
+  ROSE_ASSERT(stmt);
+
+  stmt->set_parent(n.second);
+  sg::dispatch( SetBranchCondition{stmt}, n.second );
+}
+
+void Normalization::hoistBranchInitStatementsInAst(SgNode* node)
+{
+  GetInitStatement::container hoistingTransformationList;
+
+  RoseAst ast(node);
+  // build list of stmts to transform
+  for (auto i=ast.begin();i!=ast.end();++i) {
+    // TEMPLATESKIP this will skip all templates that are found (mostly in header files). This could also be integrated into the iterator itself.
+    if(isTemplateNode(*i)) {
+      i.skipChildrenOnForward();
+      continue;
+    }
+
+    sg::dispatch(GetInitStatement(hoistingTransformationList), *i);
+  }
+
+  // transform stmts
+  for (auto match: hoistingTransformationList) {
+    hoistBranchInitStatement(match);
+  }
+}
+
   /***************************************************************************
    * HOISTING OF CONDITION EXPRESSIONS (if, switch, do, do-while)
    **************************************************************************/
@@ -386,7 +511,13 @@ namespace CodeThorn {
     list<SgStatement*> hoistingTransformationList;
     RoseAst ast(node);
     // build list of stmts to transform
-    for (auto node : ast) {
+    for (auto i=ast.begin();i!=ast.end();++i) {
+      // TEMPLATESKIP this will skip all templates that are found (mostly in header files). This could also be integrated into the iterator itself.
+      if(isTemplateNode(*i)) {
+        i.skipChildrenOnForward();
+        continue;
+      }
+      SgNode* node=*i;
       if(SgNodeHelper::isCond(node)) {
         SgStatement* stmt=isSgStatement(node->get_parent());
         if(isSgIfStmt(stmt)||isSgSwitchStatement(stmt)||isSgWhileStmt(stmt)||isSgDoWhileStmt(stmt)) {
@@ -421,32 +552,47 @@ namespace CodeThorn {
     if(isSgExprStatement(condNode)) {
       condNode=SgNodeHelper::getExprStmtChild(condNode);
     }
-    SgExpression* condExpr=isSgExpression(condNode);
-    ROSE_ASSERT(condExpr);
+
     if(isSgIfStmt(stmt)||isSgSwitchStatement(stmt)) {
+      if(SgExpression* condExpr=isSgExpression(condNode)) {
       // (i) build tmp var with cond as initializer
       SgScopeStatement* scope=stmt->get_scope();
       auto tmpVarDeclaration=buildVariableDeclarationWithInitializerForExpression(condExpr, scope);
       tmpVarDeclaration->set_parent(scope);
       auto tmpVarReference=buildVarRefExpForVariableDeclaration(tmpVarDeclaration);
       ROSE_ASSERT(tmpVarDeclaration!= 0);
-      
+
       // (ii) replace cond with new tmp-varref
       bool deleteReplacedExpression=false;
       SgNodeHelper::replaceExpression(condExpr,tmpVarReference,deleteReplacedExpression);
-      
+
       // (iii) insert declaration with initializer before stmt
       // cases if and switch
       SageInterface::insertStatementBefore(stmt, tmpVarDeclaration);
-      
+      } else if(SgVariableDeclaration* condVarDecl=isSgVariableDeclaration(condNode)) {
+        cerr<<"Error at "<<SgNodeHelper::sourceFilenameLineColumnToString(stmt)<<endl;
+        cerr<<"Error: Normalization: Variable declaration in condition of if statement. Not supported yet."<<endl;
+        exit(1);
+      } else {
+        cerr<<"Error at "<<SgNodeHelper::sourceFilenameLineColumnToString(stmt)<<endl;
+        cerr<<"Error: Normalization: Unknown language construct in condition of if statement. Not supported."<<endl;
+        exit(1);
+
+      }
+
     } else if(isSgWhileStmt(stmt)||isSgDoWhileStmt(stmt)) {
       // transformation: while(C) {...} ==> while(1) { T t=C;if(t) break; ...} (implemented)
       // alternative: while(C) {...} ==> T t=C; while(t) { ...; t=C; } (duplicates condition, not implemented)
-      // transformation: do {...} whilte (C) ==> do {...; T t=C; if(t) break; } (implemented)
-      // note: do {...} while (C) ==> do {...; T t=C;} while(t) (not possible because of C/C++ scoping rules)
+      // transformation: do {...} while (C) ==> do {...; T t=C; if(t) break; } (implemented)
+      // alternative: do {...} while (C) ==> do {...; T t=C; } while(t); (not possible because of C/C++ scoping rules)
 
       // (i) replace while-condition with constant 1 condition
       SgStatement* oldWhileCond=isSgStatement(SgNodeHelper::getCond(stmt));
+      if(isSgVariableDeclaration(oldWhileCond)) {
+        cerr<<"Error at "<<SgNodeHelper::sourceFilenameLineColumnToString(stmt)<<endl;
+        cerr<<"Error: Normalization: Variable declaration in condition of while or do-while statement. Not supported yet."<<endl;
+        exit(1);
+      }
       SgExprStatement* exprStmt=SageBuilder::buildExprStatement(SageBuilder::buildIntValHex(1));
       SgNodeHelper::setCond(stmt,exprStmt);
       exprStmt->set_parent(stmt);
@@ -470,7 +616,7 @@ namespace CodeThorn {
         cerr<<"Error: Conditional of while-stmt not an expression ("<<oldWhileCond->class_name()<<"). Requires normalization."<<endl;
         exit(1);
       }
-      
+
       ROSE_ASSERT(negatedOldWhileCond);
       SgIfStmt* ifStmt=SageBuilder::buildIfStmt(negatedOldWhileCond,
                                                 SageBuilder::buildBreakStmt(),
@@ -485,7 +631,7 @@ namespace CodeThorn {
         // do-while loop
         SageInterface::appendStatement(ifStmt,body);
       }
-    
+
       // (iv) hoistCondition from generated if-statement (recursive application of condition hoisting)
       hoistCondition(ifStmt);
 
@@ -498,7 +644,7 @@ namespace CodeThorn {
   /***************************************************************************
    * NORMALIZE EXPRESSIONS
    **************************************************************************/
-  
+
   void Normalization::normalizeExpressionsInAst(SgNode* node, bool onlyNormalizeFunctionCallExpressions) {
     // find all expressions in SgExprStatement, SgReturnStmt,
     // SgVariableDeclaration. Conditions are normalized in previous
@@ -510,6 +656,13 @@ namespace CodeThorn {
       // match on expr stmts and transform the expression
       SgStatement* stmt=0;
       SgExpression* expr=0;
+
+      // TEMPLATESKIP this will skip all templates that are found (mostly in header files). This could also be integrated into the iterator itself.
+      if(isTemplateNode(*i)) {
+        i.skipChildrenOnForward();
+        continue;
+      }
+
       if(SgExprStatement* exprStmt=isSgExprStatement(*i)) {
         if(!SgNodeHelper::isCond(exprStmt)) {
           stmt=exprStmt;
@@ -559,12 +712,12 @@ namespace CodeThorn {
           bool shareExpression=false;
           auto tmpVarDeclaration=buildVariableDeclarationWithInitializerForExpression(expr,scope,shareExpression);
           addToTmpVarMapping((*j).tmpVarNr,tmpVarDeclaration);
-          
+
           ROSE_ASSERT(tmpVarDeclaration);
           tmpVarDeclaration->set_parent(scope);
           auto tmpVarReference=buildVarRefExpForVariableDeclaration(tmpVarDeclaration);
           ROSE_ASSERT(tmpVarReference);
-          
+
           // ii) insert tmp-var initializer
           insertNormalizedSubExpressionFragment(tmpVarDeclaration,stmt);
           // ii) replace use of expr with tmp-var
@@ -609,7 +762,7 @@ namespace CodeThorn {
           TmpVarNrType condTmpVarNr=(*j).declVarNr;
           SAWYER_MESG(logger[TRACE])<<"GENERATING IF ELSE STMT: condtmpvarNr "<<condTmpVarNr<<endl;
           ROSE_ASSERT(isValidGeneratedTmpVarDeclNr(condTmpVarNr));
-          SgExpression* cond=getVarRefExp(condTmpVarNr); 
+          SgExpression* cond=getVarRefExp(condTmpVarNr);
           SgStatement* true_body=(*j).trueBody;
           SgStatement* false_body=(*j).falseBody;
           SgIfStmt* ifStmt=Normalization::generateIfElseStmt(cond,true_body,false_body);
@@ -618,10 +771,10 @@ namespace CodeThorn {
         }
 
         case Normalization::GEN_BOOL_VAR_IF_ELSE_STMT: {
+          SAWYER_MESG(logger[TRACE])<<"GENERATING BOOL VAR IF ELSE STMT: logOpTmpVarNr: "<<(*j).declVarNr<<" condVarNr: "<<(*j).condVarNr<<endl;
           SgVariableDeclaration* decl=getVarDecl((*j).declVarNr);
           SgVarRefExp* varRefExp=SageBuilder::buildVarRefExp(decl);
           SgScopeStatement* scope=stmt->get_scope();
-          SAWYER_MESG(logger[TRACE])<<"GENERATING BOOL VAR IF ELSE STMT: logOpTmpVarNr: "<<(*j).declVarNr<<" condVarNr: "<<(*j).condVarNr<<endl;
           SgExpression* cond=getVarRefExp((*j).condVarNr);
           SgStatement* true_body=(*j).trueBody;
           SgStatement* false_body=(*j).falseBody;
@@ -651,7 +804,7 @@ namespace CodeThorn {
           break;
         }
         case Normalization::GEN_CONDOP_IF_ELSE_STMT: {
-          SAWYER_MESG(logger[TRACE])<<"GENERATING CONDOP IF ELSE STMT:"<<endl;
+          SAWYER_MESG(logger[TRACE])<<"GENERATING CONDOP IF ELSE STMT: condvarnr:"<<(*j).condVarNr<<endl;
           SgExpression* cond=getVarRefExp((*j).condVarNr);
           SgStatement* true_body=(*j).trueBody;
           SgStatement* false_body=(*j).falseBody;
@@ -678,7 +831,7 @@ namespace CodeThorn {
       } // end of transformation loop
     }
   }
-  
+
   // stmt is only passed through and used to determine the scope when generating tmp-variables
   void Normalization::normalizeExpression(SgStatement* stmt, SgExpression* expr) {
     SAWYER_MESG(logger[TRACE])<<"normalizing "<<(expr)->unparseToString()<<endl;
@@ -700,10 +853,10 @@ namespace CodeThorn {
       stmtParent2->replace_statement(stmt,block);
       stmt->set_parent(0);
       block->append_statement(stmt);
-      ROSE_ASSERT(stmt->get_parent()==block); 
+      ROSE_ASSERT(stmt->get_parent()==block);
       registerSubExpressionTempVars(stmt,expr,subExprTransformationList,false);
     }
-    // for each expression one SubExprTransformationList is inserted 
+    // for each expression one SubExprTransformationList is inserted
     exprTransformationList.push_back(subExprTransformationList);
   }
 
@@ -720,20 +873,28 @@ add
   }
 #endif
 
+  static
+  bool isNullThrow(SgExpression* expr)
+  {
+    SgThrowOp* throwexpr = isSgThrowOp(expr);
+
+    return throwexpr && (throwexpr->get_operand() == NULL);
+  }
+
   // stmt is only used to detetermined scope, which is used when generating the tmp-variable.
   Normalization::TmpVarNrType Normalization::registerSubExpressionTempVars(SgStatement* stmt, SgExpression* expr, SubExprTransformationList& subExprTransformationList,bool insideExprToBeEliminated) {
     ROSE_ASSERT(stmt);
     ROSE_ASSERT(expr);
-    Normalization::TmpVarNrType mostRecentTmpVarNr=0;
-    SAWYER_MESG(logger[TRACE])<<"registerSubExpressionTempVars@"<<":"<<SgNodeHelper::sourceLineColumnToString(expr)<<expr->class_name()<<endl;
+    SAWYER_MESG(logger[TRACE])<<"registerSubExpressionTempVars:insideExpToBeElim:"<<insideExprToBeEliminated<<" @"<<SgNodeHelper::sourceLineColumnToString(expr)<<expr->class_name()<<":"<<AstTerm::astTermWithNullValuesToString(expr)<<endl;
+    Normalization::TmpVarNrType mostRecentTmpVarNr=-1;
     /*if(SgCastExp* castExp=isSgCastExp(expr)) {
       registerSubExpressionTempVars(stmt,castExp->get_operand(),subExprTransformationList);
-      } else*/ 
-    if(SgPntrArrRefExp* arrExp=isSgPntrArrRefExp(expr)) {
+      } else*/
+    /*if(SgPntrArrRefExp* arrExp=isSgPntrArrRefExp(expr)) {
       // special case: normalize array index-expressions
       registerSubExpressionTempVars(stmt,isSgExpression(SgNodeHelper::getRhs(arrExp)),subExprTransformationList,insideExprToBeEliminated);
       mostRecentTmpVarNr=registerTmpVarInitialization(stmt,expr,subExprTransformationList);
-    } else if(SgAddressOfOp* addressOfOp=isSgAddressOfOp(expr)) {
+      } else*/ if(SgAddressOfOp* addressOfOp=isSgAddressOfOp(expr)) {
       // never normalize address operator - skip all address operators
       SAWYER_MESG(logger[TRACE])<<"skipping argument of address operator to be normalized: "<<addressOfOp->unparseToString()<<endl;
       SgExpression* addressOfOperand=isSgExpression(SgNodeHelper::getUnaryOpChild(addressOfOp));
@@ -749,12 +910,11 @@ add
       // special case: normalize assignment with lhs/rhs-semantics
 
       if(isSgExprStatement(expr->get_parent())) {
-        // special handline of assignment that is not inside an expression
-        // normalize rhs of assignment
+        // special handling of assignment that is not inside an
+        // expression normalize rhs of assignment
         mostRecentTmpVarNr=registerSubExpressionTempVars(stmt,isSgExpression(SgNodeHelper::getRhs(expr)),subExprTransformationList,insideExprToBeEliminated);
-        // normalize lhs of assignment
-        // skip normalizing top-most operator of lhs because an
-        // lvalue-expression must remain an
+        // normalize lhs of assignment skip normalizing top-most
+        // operator of lhs because an lvalue-expression must remain an
         // lvalue-expression. Introduction of temporary would be
         // wrong. Note: not all operators can appear as top-most op on
         // lhs.
@@ -849,7 +1009,8 @@ add
       // hoist condition
       SgExpression* cond=conditionalExp->get_conditional_exp();
       Normalization::TmpVarNrType condResultTempVarNr=registerSubExpressionTempVars(stmt,cond,subExprTransformationList,insideExprToBeEliminated);
-      // handle both branches
+      SAWYER_MESG(logger[TRACE])<<"condResultTempVarNr: "<<condResultTempVarNr<<endl;
+      // handle both branches xxx
       SgBasicBlock* thenBlock=SageBuilder::buildBasicBlock();
       SgBasicBlock* elseBlock=SageBuilder::buildBasicBlock();
       registerCondOpIfElseStmt(stmt,cond,condResultTempVarNr,thenBlock,elseBlock,subExprTransformationList);
@@ -883,7 +1044,7 @@ add
           mostRecentTmpVarNr=fbResultTempVarNr; // note both branches must be either void or non-void.
         } else {
           // special case: if void-expr then ?-op must be removed. In
-          // this case the operator must be the inside a ExprStmt (casts
+          // this case the operator must be inside an ExprStmt (casts
           // may exist as well, therefore the pattern can be more
           // complicated, but the root is stmt.
           registerStmtRemoval(stmt,subExprTransformationList);
@@ -901,17 +1062,22 @@ add
       Normalization::TmpVarNrType rhsResultTmpVarNr=registerSubExpressionTempVars(stmt,isSgExpression(SgNodeHelper::getRhs(expr)),subExprTransformationList,insideExprToBeEliminated);
       Normalization::TmpVarNrType lhsResultTmpVarNr=registerSubExpressionTempVars(stmt,isSgExpression(SgNodeHelper::getLhs(expr)),subExprTransformationList,insideExprToBeEliminated);
       mostRecentTmpVarNr=registerTmpVarInitialization(stmt,expr,lhsResultTmpVarNr,rhsResultTmpVarNr,subExprTransformationList);
+    } else if(options.normalizeCplusplus && isNullThrow(expr)) {
+      mostRecentTmpVarNr=0; // PP correct?
     } else if(isSgUnaryOp(expr)) {
       // general case: unary operator
       Normalization::TmpVarNrType unaryResultTmpVarNr=registerSubExpressionTempVars(stmt,isSgExpression(SgNodeHelper::getUnaryOpChild(expr)),subExprTransformationList,insideExprToBeEliminated);
       mostRecentTmpVarNr=registerTmpVarInitialization(stmt,expr,unaryResultTmpVarNr,subExprTransformationList);
+    } else if(options.normalizeCplusplus && isSgNewExp(expr)) {
+      // \todo PP normalize new arguments?
+      mostRecentTmpVarNr=registerTmpVarInitialization(stmt,expr,subExprTransformationList);
     } else {
-      // leave node.  
+      // leave node.
       // MS: 05/09/2019: register tmp var if parent is AndOp or OrOp
       // to ensure logop (and/or)s can operate on registered tmp vars
       // (NORM41)
       SgNode* p=expr->get_parent();
-      if(isSgAndOp(p)||isSgOrOp(p)) {
+      if(isSgAndOp(p)||isSgOrOp(p)||isSgConditionalExp(p)) {
         mostRecentTmpVarNr=registerTmpVarInitialization(stmt,expr,subExprTransformationList);
       } else {
         mostRecentTmpVarNr=0;
@@ -980,6 +1146,12 @@ add
   }
 
   bool Normalization::isValidGeneratedTmpVarDeclNr(Normalization::TmpVarNrType tmpVarNr) {
+    if(tmpVarNr<1) {
+      SAWYER_MESG(logger[TRACE])<<"isValidGeneratedTmpVarDeclNr: tmpVarnr:"<<tmpVarNr<<endl;
+    }
+    if(!tmpVarNrDeclExists(tmpVarNr)) {
+      SAWYER_MESG(logger[TRACE])<<"isValidGeneratedTmpVarDeclNr: tmpVarnr:"<<tmpVarNr<<" does not exist!"<<endl;
+    }
     return tmpVarNr>0 && tmpVarNrDeclExists(tmpVarNr);
   }
 
@@ -997,7 +1169,7 @@ add
     ROSE_ASSERT(isValidRegisteredTmpVarNr(tmpVarNr));
     RegisteredSubExprTransformation seTrans(Normalization::GEN_TMP_VAR_ASSIGN_WITH_EXPR,stmt,expr);
     seTrans.tmpVarNr=tmpVarNr;
-    subExprTransformationList.push_back(seTrans);    
+    subExprTransformationList.push_back(seTrans);
   }
 
   void Normalization::registerTmpVarAssignment(SgStatement* stmt,SgExpression* expr, Normalization::TmpVarNrType lhsVarNr, Normalization::TmpVarNrType rhsVarNr, SubExprTransformationList& subExprTransformationList) {
@@ -1027,7 +1199,7 @@ add
     subExprTransformationList.push_back(seTrans);
     return nr;
   }
-  
+
   Normalization::TmpVarNrType Normalization::registerTmpVarInitialization(SgStatement* stmt, SgExpression  * expr, Normalization::TmpVarNrType unaryTmpVarNr, SubExprTransformationList& subExprTransformationList) {
     incTmpVarNr();
     TmpVarNrType nr=getTmpVarNr();
@@ -1094,6 +1266,8 @@ add
 
   void Normalization::registerCondOpIfElseStmt(SgStatement* stmt, SgExpression  *cond, Normalization::TmpVarNrType condVarNr, SgStatement* trueBody, SgStatement* falseBody, SubExprTransformationList& subExprTransformationList) {
     auto transOp=RegisteredSubExprTransformation(Normalization::GEN_CONDOP_IF_ELSE_STMT,stmt,cond,condVarNr,trueBody,falseBody);
+    //ROSE_ASSERT(isValidGeneratedTmpVarDeclNr(condVarNr));
+    ROSE_ASSERT(isValidRegisteredTmpVarNr(condVarNr));
     transOp.condVarNr=condVarNr;
     transOp.declVarNr=0;
     subExprTransformationList.push_back(transOp);
@@ -1129,7 +1303,7 @@ add
   void Normalization::convertAllForStmtsToWhileStmts(SgNode* top) {
     SageInterface::convertAllForsToWhiles (top);
   }
- 
+
   void Normalization::transformContinueToGotoStmts(SgWhileStmt* whileStmt) {
     cerr<<"Error: transforming continue to goto stmt in while loop not supported yet."<<endl;
     exit(1);
@@ -1152,7 +1326,7 @@ add
           // only change break statements in switch stmt if explicitly requested
           if(options.transformBreakToGotoInSwitchStmt) {
             breakTransformationList.push_back(stmt);
-          } 
+          }
         } else {
           if(options.transformBreakToGotoInLoopStmts && CodeThorn::CFAnalysis::isLoopConstructRootNode(stmt)) {
             breakTransformationList.push_back(stmt);
@@ -1175,7 +1349,7 @@ add
       }
     }
   }
-  
+
   // creates a goto at end of 'block', and inserts a label before statement 'target'.
   // ==>  Label: (function-scope is inferred from 'target')
   SgLabelStatement* Normalization::createLabel(SgStatement* target) {
@@ -1186,7 +1360,7 @@ add
                                        isSgScopeStatement(target->get_parent()));
     return newLabel;
   }
-  
+
   // creates a goto-stmt and inserts the goto-stmt referring to the
   // provided label before statement 'target'.
   // Label: ... targetStmt; ==>  Label: ... goto Label; targetStmt;
@@ -1195,7 +1369,7 @@ add
     SgGotoStatement* newGoto = SageBuilder::buildGotoStatement(newLabel);
     return newGoto;
   }
-  
+
   // creates a goto at end of 'block', and inserts a label before statement 'target'.
   void Normalization::createGotoStmtAtEndOfBlock(SgLabelStatement* newLabel, SgBasicBlock* block, SgStatement* target) {
     SgGotoStatement* newGoto=createGotoStmtAndInsertLabel(newLabel, target);
@@ -1222,20 +1396,20 @@ add
 
       SgSymbol* nameSymbol = SageInterface::lookupSymbolInParentScopes(SgName(name), scope,NULL,NULL);
       collision = (nameSymbol != NULL);
-      
+
       //Look up the name in the children scopes
       Rose_STL_Container<SgNode*> childScopes = NodeQuery::querySubTree(scope, V_SgScopeStatement);
-      
+
       BOOST_FOREACH(SgNode* childScope, childScopes) {
         SgScopeStatement* childScopeStatement = isSgScopeStatement(childScope);
           nameSymbol = childScopeStatement->lookup_symbol(SgName(name),NULL,NULL);
           collision = collision || (nameSymbol != NULL);
       }
     } while (collision);
-    
+
     return name;
   }
-  
+
   SgExprStatement* Normalization::generateTmpVarAssignment(Normalization::TmpVarNrType lhsVarNr, Normalization::TmpVarNrType rhsVarNr) {
     auto lhsVarRefExp=getVarRefExp(lhsVarNr);
     auto rhsVarRefExp=getVarRefExp(rhsVarNr);
@@ -1271,14 +1445,14 @@ add
 
     //Generate a unique variable name
     string name = generateUniqueVariableName(scope,_tmpVarBaseName);
-    
+
     //initialize the variable in its declaration
     SgAssignInitializer* initializer=nullptr;
     if(initWithExpression) {
       SgExpression* initExpression = shareExpression?expression:SageInterface::copyExpression(expression);
       initializer = SageBuilder::buildAssignInitializer(initExpression);
     }
-    
+
     /* special case: check if expression is a struct/class/union copied by value. If yes introduce a reference type for the tmp var (to avoid
      copy semantics which would make assignments to the members of the struct not having any effect on the original data */
     if(isSgClassType(variableType)) {
@@ -1287,7 +1461,7 @@ add
 
     SgVariableDeclaration* newVarDeclaration = SageBuilder::buildVariableDeclaration(name, variableType, initializer, scope);
     ROSE_ASSERT(newVarDeclaration);
-    
+
     return newVarDeclaration;
   }
 

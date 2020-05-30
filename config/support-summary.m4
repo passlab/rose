@@ -34,6 +34,7 @@ AC_DEFUN([ROSE_SUPPORT_SUMMARY],[
     echo "    Binaries                         ${support_binaries_frontend:-no}"
     echo "    C                                ${support_c_frontend:-no}"
     echo "    C++                              ${support_cxx_frontend:-no}"
+    echo "    C preprocessor                   ${support_cpp_frontend:-no}"
     echo "    Cuda                             ${support_cuda_frontend:-no}"
     echo "    Fortran                          ${support_fortran_frontend:-no}"
     echo "    Java                             ${support_java_frontend:-no}"
@@ -67,6 +68,7 @@ AC_DEFUN([ROSE_SUPPORT_SUMMARY],[
     if test -n "$support_binaries_frontend" -o -n "$verbose"; then
         ROSE_SUMMARY_HEADING([Binary analysis support])
 	echo "    i386 support                     ${CFLAGS32:-none}"
+	echo "    libcapstone                      ${ROSE_HAVE_CAPSTONE:-none}"
 	echo "    libmagic                         ${ROSE_HAVE_LIBMAGIC:-none}"
 	echo "    readline                         ${LIBREADLINE_LIBRARY_PATH:-none}"
 	echo "    SQLite3                          ${SQLITE3_VERSION:-none}"
