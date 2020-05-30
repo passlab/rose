@@ -57,7 +57,7 @@ elif test "x$javasetting" = xyes || test "x$javasetting" = xtry; then
 	  fi
       
     # echo "After setting value: JAVA_PATH = ${JAVA_PATH}"
-    elif "x$javasetting" = "xyes"; then
+    elif test "x$javasetting" == "xyes"; then
       AC_MSG_ERROR([--with-java was given but "java" is not in PATH and JAVA_HOME was not set])
     else # $javasetting is "try", so it is not an error for Java to not be found
     # echo 'FALSE case: x$javasetting = xyes;'
@@ -121,6 +121,7 @@ if test "x$USE_JAVA" = x1; then
     JAVA_VERSION_MAJOR=`echo ${JAVA_VERSION} | awk 'BEGIN {FS="."} {print [$]1}'`
     JAVA_VERSION_MINOR=`echo ${JAVA_VERSION} | awk 'BEGIN {FS="."} {print [$]2}'`
     JAVA_VERSION_PATCH=`echo ${JAVA_VERSION} | awk 'BEGIN {FS="."} {print [$]3}' | awk 'BEGIN {FS="_"} {print [$]1}'`
+    JAVA_VERSION_RELEASE=`echo ${JAVA_VERSION} | awk 'BEGIN {FS="."} {print [$]3}' | awk 'BEGIN {FS="_"} {print [$]2}'`
 
     AC_MSG_CHECKING([JAVA_VERSION])
     AC_MSG_RESULT([${JAVA_VERSION}])
@@ -134,14 +135,19 @@ if test "x$USE_JAVA" = x1; then
     AC_MSG_CHECKING([JAVA_VERSION_PATCH])
     AC_MSG_RESULT([${JAVA_VERSION_PATCH}])
 
+    AC_MSG_CHECKING([JAVA_VERSION_RELEASE])
+    AC_MSG_RESULT([${JAVA_VERSION_RELEASE}])
+
     if test -z "${JAVA_VERSION_MAJOR}" ||
        test -z "${JAVA_VERSION_MINOR}" ||
-       test -z "${JAVA_VERSION_PATCH}"
+       test -z "${JAVA_VERSION_PATCH}" ||
+       test -z "${JAVA_VERSION_RELEASE}"
     then
       echo "JAVA_VERSION_MAJOR = $JAVA_VERSION_MAJOR"
       echo "JAVA_VERSION_MINOR = $JAVA_VERSION_MINOR"
       echo "JAVA_VERSION_PATCH = $JAVA_VERSION_PATCH"
-      ROSE_MSG_ERROR([An error occurred while trying to determine your java version: one or more extracted major, minor, and patch displayed above are empty. Please look into rose/config/support-java.m4 to make sure the extraction commands inside the m4 file work as expected.])
+      echo "JAVA_VERSION_RELEASE = $JAVA_VERSION_RELEASE"
+      ROSE_MSG_ERROR([An error occurred while trying to determine your java version: one or more extracted major, minor, patch and release version numbers displayed above are empty. Please look into rose/config/support-java.m4 to make sure the extraction commands inside the m4 file work as expected.])
     else
       if test ${JAVA_VERSION_MAJOR} -lt 1 ||
         (test ${JAVA_VERSION_MAJOR} -eq 1 &&
@@ -214,7 +220,6 @@ if test "x$USE_JAVA" = x1; then
   AC_DEFINE([USE_ROSE_JAVA_SUPPORT],[],[Controls use of ROSE support for Java.])
 # DQ (10/18/2010): Renaming this macro to be uniform in ROSE.
   AC_DEFINE([USE_ROSE_INTERNAL_JAVA_SUPPORT],[],[Controls use of ROSE support for Java.])
-fi
 
 # DQ (12/6/2016): In MAC OSX set the LDFLAGS to include the rpath.
 # LDFLAGS="-Xlinker -rpath ${JAVA_HOME}/jre/lib/server"
@@ -224,6 +229,8 @@ fi
 
 # AM_COND_IF([OS_MACOSX],[JAVA_JVM_INCLUDE="-I${JAVA_PATH}/include -I${JAVA_PATH}/include/darwin"],[JAVA_JVM_INCLUDE="-I${JAVA_PATH}/include -I${JAVA_PATH}/include/linux"])
 AM_COND_IF([OS_MACOSX],[LDFLAGS="-Xlinker -rpath ${JAVA_HOME}/jre/lib/server $LDFLAGS"],[])
+
+fi
 
 AC_MSG_NOTICE([in support-java: build_os is "$build_os"])
 AC_MSG_NOTICE([in support-java: LDFLAGS = "$LDFLAGS"])
@@ -277,6 +284,11 @@ AC_DEFINE_UNQUOTED(
   JAVA_VERSION_PATCH,
   ["${JAVA_VERSION_PATCH}"],
   [Patch version number of the Java JDK])
+AC_DEFINE_UNQUOTED(
+  JAVA_VERSION_RELEASE,
+  ["${JAVA_VERSION_RELEASE}"],
+  [Release version number of the Java JDK])
+
 
 dnl Summary of Java information
 AC_MSG_NOTICE([summary of Java information:])
