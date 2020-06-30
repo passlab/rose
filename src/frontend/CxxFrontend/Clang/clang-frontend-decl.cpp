@@ -521,7 +521,14 @@ bool ClangToSageTranslator::VisitNamespaceDecl(clang::NamespaceDecl * namespace_
 #endif
     bool res = true;
 
-    ROSE_ASSERT(FAIL_TODO == 0); // TODO
+    //ROSE_ASSERT(FAIL_TODO == 0); // TODO
+    // Currently, no action is conducted for namespace.
+    // namespace_decl->isAnonymousNamespace()
+    // namespace_decl->isOriginalNamespace()
+    // namespace_decl->isInline()
+
+    // namespace_decl->getParentFunctionOrMethod()->setDeclContext(namespace_decl);
+    // namespace_decl->getParentFunctionOrMethod()
 
     return VisitNamedDecl(namespace_decl, node) && res;
 }
