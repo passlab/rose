@@ -312,6 +312,9 @@ SgNode * ClangToSageTranslator::Traverse(clang::Decl * decl) {
         case clang::Decl::TranslationUnit:
             ret_status = VisitTranslationUnitDecl((clang::TranslationUnitDecl *)decl, &result);
             break;
+        case clang::Decl::Var:
+            ret_status = VisitVarDecl((clang::VarDecl *)decl, &result);
+            break;
         default:
             std::cerr << "Unknown declacaration kind: " << decl->getDeclKindName() << " !" << std::endl;
             ROSE_ASSERT(false);
