@@ -484,6 +484,9 @@ SgNode * ClangToSageTranslator::Traverse(clang::Stmt * stmt) {
         case clang::Stmt::UnaryOperatorClass:
             ret_status = VisitUnaryOperator((clang::UnaryOperator *)stmt, &result);
             break;
+        case clang::Stmt::CallExprClass:
+            ret_status = VisitCallExpr((clang::CallExpr *)stmt, &result);
+            break;
         default:
             std::cerr << "Unknown statement kind: " << stmt->getStmtClassName() << " !" << std::endl;
             ROSE_ASSERT(false);
@@ -1015,7 +1018,7 @@ bool ClangToSageTranslator::VisitNullStmt(clang::NullStmt * null_stmt, SgNode **
 #endif
     bool res = true;
 
-    ROSE_ASSERT(FAIL_TODO == 0); // TODO
+    *node = SageBuilder::buildNullStatement();
 
     return VisitStmt(null_stmt, node) && res;
 }
