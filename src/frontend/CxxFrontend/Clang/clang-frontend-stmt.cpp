@@ -1482,7 +1482,7 @@ bool ClangToSageTranslator::VisitValueStmt(clang::ValueStmt * value_stmt, SgNode
 #endif
     bool res = true;
 
-    ROSE_ASSERT(FAIL_TODO == 0); // TODO
+    //ROSE_ASSERT(FAIL_TODO == 0); // TODO
 
     return VisitStmt(value_stmt, node) && res;
 }
