@@ -487,6 +487,9 @@ SgNode * ClangToSageTranslator::Traverse(clang::Stmt * stmt) {
         case clang::Stmt::CallExprClass:
             ret_status = VisitCallExpr((clang::CallExpr *)stmt, &result);
             break;
+        case clang::Stmt::BinaryOperatorClass:
+            ret_status = VisitBinaryOperator((clang::BinaryOperator *)stmt, &result);
+            break;
         default:
             std::cerr << "Unknown statement kind: " << stmt->getStmtClassName() << " !" << std::endl;
             ROSE_ASSERT(false);
